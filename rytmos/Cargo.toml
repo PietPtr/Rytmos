@@ -1,0 +1,11 @@
+[package]
+name = "rytmos"
+version = "0.1.0"
+edition = "2021"
+description = "Music notation renderer for embedded devices"
+
+[dependencies]
+embedded-graphics = "0.8.1"
+embedded-graphics-simulator = "0.6.0"
+heapless = "0.8.0"
+log = "0.4.22"
