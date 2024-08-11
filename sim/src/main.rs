@@ -1,6 +1,5 @@
 use std::{thread, time::Duration};
 
-use defmt::*;
 use defmt_rtt as _;
 use embedded_graphics::{
     pixelcolor::BinaryColor,
@@ -8,14 +7,15 @@ use embedded_graphics::{
     primitives::{PrimitiveStyle, Rectangle},
 };
 use embedded_graphics_simulator::{
-    BinaryColorTheme, OutputSettingsBuilder, SimulatorDisplay, SimulatorEvent, Window,
+    sdl2::Keycode, BinaryColorTheme, OutputSettingsBuilder, SimulatorDisplay, SimulatorEvent,
+    Window,
 };
 use env_logger::{Builder, Env};
 use log::LevelFilter;
 use rytmos::staff::{self, Accidental, Clef, Music, Note, Staff, StaffElement};
 
 fn main() -> Result<(), core::convert::Infallible> {
-    let music1 = &[
+    let music1 = vec![
         StaffElement::Clef(Clef::Bass),
         StaffElement::Music(&[
             Music::Note(
@@ -35,7 +35,7 @@ fn main() -> Result<(), core::convert::Infallible> {
         ]),
     ];
 
-    let all_rests = &[
+    let all_rests = vec![
         StaffElement::Clef(Clef::Bass),
         StaffElement::Music(&[
             Music::Rest(staff::Duration::Whole),
@@ -46,7 +46,7 @@ fn main() -> Result<(), core::convert::Infallible> {
         ]),
     ];
 
-    let sixteenths = &[
+    let sixteenths = vec![
         StaffElement::Clef(Clef::Bass),
         StaffElement::Music(&[
             Music::Rest(staff::Duration::Sixteenth),
@@ -68,7 +68,80 @@ fn main() -> Result<(), core::convert::Infallible> {
         ]),
     ];
 
-    let dotted_rests = &[
+    let beamed_sixteenths_and_eighths = vec![
+        StaffElement::Clef(Clef::Bass),
+        StaffElement::Music(&[
+            Music::Note(Note::A(Accidental::Natural, 1), staff::Duration::Sixteenth),
+            Music::Note(Note::A(Accidental::Natural, 1), staff::Duration::Sixteenth),
+            Music::Note(Note::A(Accidental::Natural, 1), staff::Duration::Sixteenth),
+            Music::Note(Note::A(Accidental::Natural, 1), staff::Duration::Sixteenth),
+            Music::Note(Note::A(Accidental::Natural, 2), staff::Duration::Sixteenth),
+            Music::Note(Note::A(Accidental::Natural, 2), staff::Duration::Sixteenth),
+            Music::Note(Note::A(Accidental::Natural, 2), staff::Duration::Sixteenth),
+            Music::Note(Note::A(Accidental::Natural, 2), staff::Duration::Sixteenth),
+            Music::Note(Note::B(Accidental::Natural, 1), staff::Duration::Sixteenth),
+            Music::Note(Note::B(Accidental::Natural, 1), staff::Duration::Sixteenth),
+            Music::Note(Note::B(Accidental::Natural, 1), staff::Duration::Sixteenth),
+            Music::Note(Note::B(Accidental::Natural, 1), staff::Duration::Sixteenth),
+            Music::Note(Note::B(Accidental::Natural, 2), staff::Duration::Sixteenth),
+            Music::Note(Note::B(Accidental::Natural, 2), staff::Duration::Sixteenth),
+            Music::Note(Note::B(Accidental::Natural, 2), staff::Duration::Sixteenth),
+            Music::Note(Note::B(Accidental::Natural, 2), staff::Duration::Sixteenth),
+        ]),
+    ];
+
+    let disconnected_beams = vec![
+        StaffElement::Clef(Clef::Bass),
+        StaffElement::Music(&[
+            // 1 e + a
+            Music::Note(Note::A(Accidental::Natural, 1), staff::Duration::Sixteenth),
+            Music::Note(Note::A(Accidental::Natural, 1), staff::Duration::Sixteenth),
+            Music::Note(Note::A(Accidental::Natural, 1), staff::Duration::Eighth),
+            // 2 e + a
+            Music::Note(Note::A(Accidental::Natural, 1), staff::Duration::Sixteenth),
+            Music::Note(Note::A(Accidental::Natural, 1), staff::Duration::Eighth),
+            Music::Note(Note::A(Accidental::Natural, 1), staff::Duration::Sixteenth),
+            // 3 e + a
+            Music::Note(Note::A(Accidental::Natural, 1), staff::Duration::Eighth),
+            Music::Note(Note::A(Accidental::Natural, 1), staff::Duration::Sixteenth),
+            Music::Note(Note::A(Accidental::Natural, 1), staff::Duration::Sixteenth),
+            // 4 e + a
+            Music::Note(Note::A(Accidental::Natural, 1), staff::Duration::Sixteenth),
+            Music::Note(
+                Note::A(Accidental::Natural, 1),
+                staff::Duration::DottedEighth,
+            ),
+        ]),
+    ];
+
+    let ties = vec![
+        StaffElement::Clef(Clef::Bass),
+        StaffElement::Music(&[
+            // 1 e + a
+            Music::Note(Note::C(Accidental::Natural, 2), staff::Duration::Sixteenth),
+            Music::Note(Note::B(Accidental::Natural, 1), staff::Duration::Sixteenth),
+            Music::Note(Note::B(Accidental::Natural, 1), staff::Duration::Eighth),
+            Music::Tie,
+            // 2 e + a
+            Music::Note(Note::B(Accidental::Natural, 1), staff::Duration::Sixteenth),
+            Music::Note(Note::C(Accidental::Natural, 2), staff::Duration::Eighth),
+            Music::Note(Note::E(Accidental::Natural, 2), staff::Duration::Sixteenth),
+            Music::Tie,
+            // 3 e + a
+            Music::Note(Note::E(Accidental::Natural, 2), staff::Duration::Eighth),
+            Music::Note(Note::D(Accidental::Natural, 2), staff::Duration::Sixteenth),
+            Music::Note(Note::F(Accidental::Natural, 2), staff::Duration::Sixteenth),
+            Music::Tie,
+            // 4 e + a
+            Music::Note(Note::F(Accidental::Natural, 2), staff::Duration::Sixteenth),
+            Music::Note(
+                Note::A(Accidental::Natural, 2),
+                staff::Duration::DottedEighth,
+            ),
+        ]),
+    ];
+
+    let dotted_rests = vec![
         StaffElement::Clef(Clef::Bass),
         StaffElement::Music(&[
             Music::Rest(staff::Duration::DottedHalf),
@@ -78,7 +151,7 @@ fn main() -> Result<(), core::convert::Infallible> {
     ];
 
     // TODO: multimeasure support in staff drawing? or responsibility of user?
-    let all_quarters = &[
+    let _all_quarters = vec![
         StaffElement::Clef(Clef::Bass),
         StaffElement::Music(&[
             Music::Note(Note::D(Accidental::Natural, 2), staff::Duration::Quarter),
@@ -102,7 +175,7 @@ fn main() -> Result<(), core::convert::Infallible> {
         ]),
     ];
 
-    let flags = &[
+    let flags = vec![
         StaffElement::Clef(Clef::Bass),
         StaffElement::Music(&[
             Music::Note(Note::A(Accidental::Natural, 1), staff::Duration::Eighth),
@@ -117,13 +190,22 @@ fn main() -> Result<(), core::convert::Infallible> {
         ]),
     ];
 
+    let examples = &[
+        ties,
+        disconnected_beams,
+        beamed_sixteenths_and_eighths,
+        music1,
+        all_rests,
+        sixteenths,
+        dotted_rests,
+        // all_quarters,
+        flags,
+    ];
+
     Builder::from_env(Env::default().default_filter_or(LevelFilter::Trace.to_string())).init();
 
-    info!("Starting sim");
     let display_size = Size::new(128, 64);
     let mut display = SimulatorDisplay::<BinaryColor>::new(display_size);
-
-    let line_style = PrimitiveStyle::with_stroke(BinaryColor::On, 1);
 
     let output_settings = OutputSettingsBuilder::new()
         .theme(BinaryColorTheme::OledWhite)
@@ -135,67 +217,35 @@ fn main() -> Result<(), core::convert::Infallible> {
     // let staff = Staff::new(display_size.width - 8, Point::new(4, 4));
     let staff = Staff::new(display_size.width, Point::new(0, 0));
 
-    let mut i = 500;
-    loop {
+    let mut example_idx = 0;
+
+    'main: loop {
         Rectangle::new(Point::zero(), display_size)
             .into_styled(PrimitiveStyle::with_fill(BinaryColor::Off))
             .draw(&mut display)?;
-        // Circle::new(
-        //     Point::new(i % display_size.width as i32, i / display_size.width as i32),
-        //     20,
-        // )
-        // .into_styled(line_style)
-        // .draw(&mut display)?;
 
-        // for i in 0..5 {
-        //     Line::new(
-        //         Point::new(4, 12 + 4 * i),
-        //         Point::new(display_size.width as i32 - 7, 12 + 4 * i),
-        //     )
-        //     .into_styled(line_style)
-        //     .draw(&mut display)?;
-        // }
-
-        staff.draw(&mut display, flags)?;
-
-        // let raw_image = ImageRaw::<BinaryColor>::new(symbols::WHOLE_NOTE, 6);
-        // Image::new(&raw_image, Point::zero()).draw(&mut display)?;
-
-        // let raw_image = ImageRaw::<BinaryColor>::new(symbols::HALF_NOTE, 6);
-        // Image::new(&raw_image, Point::new(7, 0)).draw(&mut display)?;
-
-        // let raw_image = ImageRaw::<BinaryColor>::new(symbols::QUARTER_NOTE, 6);
-        // Image::new(&raw_image, Point::new(11, 3 + i % 25)).draw(&mut display)?;
-
-        // let raw_image = ImageRaw::<BinaryColor>::new(symbols::QUARTER_REST, 5);
-        // Image::new(&raw_image, Point::new(21, 16)).draw(&mut display)?;
-
-        // let raw_image = ImageRaw::<BinaryColor>::new(symbols::EIGHTH_NOTE, 6);
-        // Image::new(&raw_image, Point::new(28, 4)).draw(&mut display)?;
-
-        // let raw_image = ImageRaw::<BinaryColor>::new(symbols::SIXTEENTH_NOTE, 7);
-        // Image::new(&raw_image, Point::new(35, 8)).draw(&mut display)?;
-
-        // let raw_image = ImageRaw::<BinaryColor>::new(symbols::WHOLE_REST, 6);
-        // Image::new(&raw_image, Point::new(0, 9)).draw(&mut display)?;
-
-        // let raw_image = ImageRaw::<BinaryColor>::new(symbols::HALF_REST, 6);
-        // Image::new(&raw_image, Point::new(35, 8)).draw(&mut display)?;
-
-        // let raw_image = ImageRaw::<BinaryColor>::new(symbols::EIGHTH_REST, 6);
-        // Image::new(&raw_image, Point::new(42, 16)).draw(&mut display)?;
-
-        // let raw_image = ImageRaw::<BinaryColor>::new(symbols::SIXTEENTH_REST, 7);
-        // Image::new(&raw_image, Point::new(51, 16)).draw(&mut display)?;
-
-        i += 1;
+        staff.draw(&mut display, &examples[example_idx])?;
 
         window.update(&display);
 
-        if window.events().any(|e| e == SimulatorEvent::Quit) {
-            break;
+        for event in window.events() {
+            match event {
+                SimulatorEvent::KeyUp {
+                    keycode,
+                    keymod: _,
+                    repeat,
+                } => match (keycode, repeat) {
+                    (Keycode::Space, false) => {
+                        example_idx = (example_idx + 1) % examples.len();
+                    }
+                    _ => (),
+                },
+                SimulatorEvent::Quit => break 'main,
+                _ => (),
+            }
         }
-        thread::sleep(Duration::from_millis(250));
+
+        thread::sleep(Duration::from_millis(25));
     }
 
     Ok(())

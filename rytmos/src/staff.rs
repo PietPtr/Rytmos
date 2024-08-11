@@ -1,19 +1,18 @@
 use embedded_graphics::{
     draw_target::DrawTarget,
     geometry::Point,
-    image::{Image, ImageRaw},
     pixelcolor::BinaryColor,
     prelude::Size,
-    primitives::{Ellipse, Line, Primitive, PrimitiveStyle, Rectangle, StyledDrawable},
+    primitives::{Line, Primitive, PrimitiveStyle, Rectangle, StyledDrawable},
     Drawable,
 };
 use heapless::{FnvIndexMap, Vec};
 use log::{debug, error};
 
 use crate::symbols::{
-    self, BASS_CLEF, DOTTED_EIGHTH_REST, DOTTED_HALF_REST, DOTTED_QUARTER_REST, EIGHTH_REST,
-    EIGHT_FLAG, EMPTY_NOTEHEAD, FILLED_NOTEHEAD, HALF_REST, QUARTER_REST, SIXTEENTH_FLAG,
-    SIXTEENTH_REST, WHOLE_REST,
+    BASS_CLEF, DOTTED_EIGHTH_REST, DOTTED_HALF_REST, DOTTED_QUARTER_REST, EIGHTH_REST, EIGHT_FLAG,
+    EMPTY_NOTEHEAD, FILLED_NOTEHEAD, HALF_REST, QUARTER_REST, SIXTEENTH_FLAG, SIXTEENTH_REST,
+    WHOLE_REST,
 };
 
 #[derive(Debug)]
@@ -50,10 +49,12 @@ enum StemDirection {
 #[derive(Debug, Copy, Clone)]
 struct MusicSymbol {
     y: i32,
+    x: Option<i32>,
     stem_direction: StemDirection,
     stem_length: i32,
     kind: Duration,
     rest: bool,
+    tied: bool,
 }
 
 #[derive(Debug)]
@@ -63,7 +64,7 @@ struct MusicSymbolDefinitions {
 
 impl MusicSymbolDefinitions {
     const REST_OFFSET: i32 = 14;
-    const DEFAULT_STEM_LENGTH: i32 = 7;
+    const DEFAULT_STEM_LENGTH: i32 = 9;
 
     fn new(music: &[Music]) -> Result<Self, EngraveError> {
         let mut symbols = Vec::new();
@@ -73,10 +74,12 @@ impl MusicSymbolDefinitions {
                 Music::Note(note, duration) => {
                     let head = MusicSymbol {
                         y: note.y_offset(),
+                        x: None,
                         stem_direction: note.default_stem_direction(),
                         stem_length: Self::DEFAULT_STEM_LENGTH,
                         kind: duration,
                         rest: false,
+                        tied: false,
                     };
                     symbols
                         .push(head)
@@ -85,16 +88,20 @@ impl MusicSymbolDefinitions {
                 Music::Rest(duration) => {
                     let head = MusicSymbol {
                         y: Self::REST_OFFSET,
+                        x: None,
                         stem_direction: StemDirection::NotApplicable,
                         stem_length: Self::DEFAULT_STEM_LENGTH,
                         kind: duration,
                         rest: true,
+                        tied: false,
                     };
                     symbols
                         .push(head)
                         .map_err(|_| EngraveError::TooManyMusicSymbolsForVecAllocation)?;
                 }
-                Music::Tie => (),
+                Music::Tie => {
+                    symbols.last_mut().map(|s| s.tied = true);
+                }
             }
         }
 
@@ -121,7 +128,7 @@ impl SpacedMusicSymbols {
         let n = symbols.symbols.len() as i32;
         let base_space = width / n;
         let extra_space = width % n;
-        debug!("{} {} {}", extra_space, width, n);
+
         let spaced = if extra_space > 0 {
             n / extra_space
         } else {
@@ -392,7 +399,8 @@ impl Music {
     ///         - 3) Draw a horizontal line for the beam
     ///         - 4) Draw additional horizontal lines for sixteenths
     ///     - Rests are drawn using their symbol at a specific hard coded y position
-    /// TODO: ties?
+    /// TODO: ledger lines for high / low notes
+    /// TODO: interactive rhythm definition is simulatable using button events and showing toggle switch state in console (or on screen)
     pub fn draw<D>(
         target: &mut D,
         position: Point,
@@ -411,23 +419,41 @@ impl Music {
             error!("Error engraving symbols: {:?}", symbols);
         }
 
-        let glyphs = symbols.unwrap();
-
-        debug!("{:#?}", glyphs);
+        let mut glyphs = symbols.unwrap();
 
         let mut x = 0;
-        for glyph in glyphs.glyphs.iter() {
+        for glyph in glyphs.glyphs.iter_mut() {
             let beamed = glyph.symbols.len() > 1;
             let glyph_start_x = x;
 
-            for symbol in glyph.symbols.iter() {
+            for symbol in glyph.symbols.iter_mut() {
                 Self::draw_spaced_music_symbol(target, position, x, symbol, beamed)?;
+                symbol.symbol.x = Some(x);
 
                 x += symbol.space;
             }
 
             if beamed {
                 Self::draw_beams(target, position, glyph_start_x, glyph)?;
+            }
+        }
+
+        // Draw ties and other things that might need x info
+        let mut last_symbol: Option<&SpacedMusicSymbol> = None;
+        for glyph in glyphs.glyphs.iter_mut() {
+            for symbol in glyph.symbols.iter() {
+                let tied = if let Some(symbol) = last_symbol {
+                    symbol.symbol.tied
+                } else {
+                    false
+                };
+
+                if tied {
+                    // Unwrap is safe because tied can only be true if last symbol is some
+                    Self::draw_tie(target, position, last_symbol.unwrap(), symbol)?;
+                }
+
+                last_symbol = Some(symbol)
             }
         }
 
@@ -474,8 +500,6 @@ impl Music {
 
             if symbol.symbol.kind != Duration::Whole {
                 // Draw stem
-                let x_offset = Point::new(1, 0);
-
                 let (start_pos, end_pos) = if symbol.symbol.stem_direction == StemDirection::Up {
                     (
                         position + Point::new(4, 0),
@@ -492,7 +516,12 @@ impl Music {
                     .into_styled(line_style)
                     .draw(target)?;
 
+                let x_offset = Point::new(1, 0);
                 Line::new(start_pos + x_offset, end_pos + x_offset)
+                    .into_styled(bg_style)
+                    .draw(target)?;
+
+                Line::new(start_pos - x_offset, end_pos - x_offset)
                     .into_styled(bg_style)
                     .draw(target)?;
             }
@@ -540,7 +569,12 @@ impl Music {
                     }
                 };
 
-                let pos = position + offset;
+                let flip_offset = Point {
+                    x: if flipped { -1 } else { 0 },
+                    y: if flipped { -1 } else { 0 },
+                };
+
+                let pos = position + offset + flip_offset;
 
                 match symbol.symbol.kind {
                     Duration::Eighth => {
@@ -559,7 +593,10 @@ impl Music {
                     Duration::Sixteenth => {
                         crate::symbols::draw_symbol_with_direction(
                             target,
-                            pos,
+                            pos + Point {
+                                x: 0,
+                                y: if flipped { -2 } else { 0 },
+                            },
                             SIXTEENTH_FLAG,
                             flipped,
                         )?;
@@ -588,30 +625,266 @@ impl Music {
         }
 
         let style = PrimitiveStyle::with_stroke(BinaryColor::On, 1);
+        let off_style = PrimitiveStyle::with_stroke(BinaryColor::Off, 1);
 
         let first_symbol = glyph.symbols.first().unwrap().symbol;
-        let last_symbol = glyph.symbols.first().unwrap().symbol;
+        let last_symbol = glyph.symbols.last().unwrap().symbol;
+
+        let flipped = first_symbol.stem_direction == StemDirection::Down;
 
         // always draw top beam
         let top_beam_start = position
-            + if first_symbol.stem_direction == StemDirection::Up {
-                Point::new(x + 4, first_symbol.y - first_symbol.stem_length + 1)
-            } else {
+            + if flipped {
                 Point::new(x + 1, first_symbol.y + first_symbol.stem_length + 2)
+            } else {
+                Point::new(x + 4, first_symbol.y - first_symbol.stem_length + 1)
             };
-        let beam_length = 8;
+
+        let beam_length = first_symbol
+            .x
+            .and_then(|x_first| last_symbol.x.map(|x_last| x_last - x_first));
+
+        let beam_length = if let Some(length) = beam_length {
+            length
+        } else {
+            error!(
+                "Unknown beam length: x first = {:?}, x last = {:?}",
+                first_symbol.x, last_symbol.x
+            );
+            return Ok(());
+        };
+
         Rectangle::new(
             top_beam_start,
             Size {
-                width: beam_length,
+                width: beam_length as u32,
                 height: 2,
             },
         )
         .draw_styled(&style, target)?;
+
+        // Draw black lines to obscure barlines
+        for pair in glyph.symbols.windows(2) {
+            if let [first, second] = pair {
+                let x_first = first.symbol.x.unwrap_or_default();
+                let x_second = second.symbol.x.unwrap_or_default();
+                let beam_length = x_second - x_first - 1;
+
+                Rectangle::new(
+                    Point {
+                        x: position.x + x_first + if flipped { 2 } else { 5 },
+                        y: top_beam_start.y + if flipped { -1 } else { 2 },
+                    },
+                    Size {
+                        width: beam_length as u32,
+                        height: 1,
+                    },
+                )
+                .draw_styled(&off_style, target)?;
+            } else {
+                panic!("Unexpected window function return")
+            }
+        }
+
         // for each consecutive note pair
         // if sixteenths - eight: draw block facing right
         // if eight - sixteenth: draw block facing left
         // if sixteenth - sixteenht: connect
+        for pair in glyph.symbols.windows(2) {
+            if let [first, second] = pair {
+                let x_first = first.symbol.x.unwrap_or_default();
+                let x_second = second.symbol.x.unwrap_or_default();
+                let beam_length = x_second - x_first - 1;
+
+                let disconnected_beam_length = 3u32;
+
+                // For 2 cases the previous algorithm produces an artifact, prevent that
+                let mut is_ess_or_sse = false;
+                if glyph.symbols.len() == 3 {
+                    if glyph.symbols.iter().all(|s| !s.symbol.rest) {
+                        let durations: Vec<Duration, 4> =
+                            glyph.symbols.iter().map(|s| s.symbol.kind).collect();
+
+                        if durations[0] == Duration::Eighth
+                            && durations[1] == Duration::Sixteenth
+                            && durations[2] == Duration::Sixteenth
+                        {
+                            is_ess_or_sse = true;
+                        }
+
+                        if durations[0] == Duration::Sixteenth
+                            && durations[1] == Duration::Sixteenth
+                            && durations[2] == Duration::Eighth
+                        {
+                            is_ess_or_sse = true;
+                        }
+                    }
+                }
+
+                match (first.symbol.kind, second.symbol.kind) {
+                    (Duration::Eighth, Duration::Eighth) => (),
+                    (Duration::Eighth, Duration::Sixteenth) => {
+                        if !is_ess_or_sse {
+                            Rectangle::new(
+                                Point {
+                                    x: position.x + x_first + beam_length
+                                        - disconnected_beam_length as i32
+                                        + if flipped { 2 } else { 5 },
+                                    y: top_beam_start.y + if flipped { -2 } else { 3 },
+                                },
+                                Size {
+                                    width: disconnected_beam_length,
+                                    height: 1,
+                                },
+                            )
+                            .draw_styled(&style, target)?;
+                        }
+                    }
+                    (Duration::DottedEighth, Duration::Sixteenth) => {
+                        Rectangle::new(
+                            Point {
+                                x: position.x + x_first + beam_length
+                                    - disconnected_beam_length as i32
+                                    + if flipped { 2 } else { 5 },
+                                y: top_beam_start.y + if flipped { -2 } else { 3 },
+                            },
+                            Size {
+                                width: disconnected_beam_length,
+                                height: 1,
+                            },
+                        )
+                        .draw_styled(&style, target)?;
+                    }
+                    (Duration::Sixteenth, Duration::Eighth) => {
+                        if !is_ess_or_sse {
+                            Rectangle::new(
+                                Point {
+                                    x: position.x + x_first + if flipped { 2 } else { 5 },
+                                    y: top_beam_start.y + if flipped { -2 } else { 3 },
+                                },
+                                Size {
+                                    width: disconnected_beam_length,
+                                    height: 1,
+                                },
+                            )
+                            .draw_styled(&style, target)?;
+                        }
+                    }
+                    (Duration::Sixteenth, Duration::DottedEighth) => {
+                        Rectangle::new(
+                            Point {
+                                x: position.x + x_first + if flipped { 2 } else { 5 },
+                                y: top_beam_start.y + if flipped { -2 } else { 3 },
+                            },
+                            Size {
+                                width: disconnected_beam_length,
+                                height: 1,
+                            },
+                        )
+                        .draw_styled(&style, target)?;
+                    }
+                    (Duration::Sixteenth, Duration::Sixteenth) => {
+                        Rectangle::new(
+                            Point {
+                                x: position.x + x_first + if flipped { 2 } else { 5 },
+                                y: top_beam_start.y + if flipped { -2 } else { 3 },
+                            },
+                            Size {
+                                width: beam_length as u32,
+                                height: 1,
+                            },
+                        )
+                        .draw_styled(&style, target)?;
+                    }
+                    _ => panic!("Unknown beaming"),
+                }
+
+                Rectangle::new(
+                    Point {
+                        x: position.x + x_first + if flipped { 2 } else { 5 },
+                        y: top_beam_start.y + if flipped { -3 } else { 4 },
+                    },
+                    Size {
+                        width: beam_length as u32,
+                        height: 1,
+                    },
+                )
+                .draw_styled(&off_style, target)?;
+            } else {
+                panic!("Unexpected window function return")
+            }
+        }
+
+        Ok(())
+    }
+
+    fn draw_tie<D>(
+        target: &mut D,
+        position: Point,
+        first: &SpacedMusicSymbol,
+        second: &SpacedMusicSymbol,
+    ) -> Result<(), D::Error>
+    where
+        D: DrawTarget<Color = BinaryColor>,
+    {
+        let style = PrimitiveStyle::with_stroke(BinaryColor::On, 1);
+        let off_style = PrimitiveStyle::with_fill(BinaryColor::Off);
+
+        let first_x = first.symbol.x.unwrap_or(0);
+        let second_x = second.symbol.x.unwrap_or(0);
+        let tie_length = second_x - first_x;
+        let flipped = first.symbol.stem_direction == StemDirection::Down;
+
+        Rectangle::new(
+            Point {
+                x: position.x + first.symbol.x.unwrap_or(0) - 1 + if flipped { 3 } else { 3 },
+                y: position.y + first.symbol.y - 2 + if flipped { -3 } else { 7 },
+            },
+            Size {
+                width: tie_length as u32 + 2,
+                height: 4,
+            },
+        )
+        .draw_styled(&off_style, target)?;
+
+        // left point of the tie
+        Rectangle::new(
+            Point {
+                x: position.x + first.symbol.x.unwrap_or(0) + if flipped { 4 } else { 4 },
+                y: position.y + first.symbol.y + if flipped { -2 } else { 6 },
+            },
+            Size {
+                width: 1,
+                height: 1,
+            },
+        )
+        .draw_styled(&style, target)?;
+
+        // right point of the tie
+        Rectangle::new(
+            Point {
+                x: position.x + second.symbol.x.unwrap_or(0) + if flipped { 1 } else { 1 },
+                y: position.y + first.symbol.y + if flipped { -2 } else { 6 },
+            },
+            Size {
+                width: 1,
+                height: 1,
+            },
+        )
+        .draw_styled(&style, target)?;
+
+        // straight part of the tie
+        Rectangle::new(
+            Point {
+                x: position.x + first.symbol.x.unwrap_or(0) + 1 + if flipped { 4 } else { 4 },
+                y: position.y + first.symbol.y + if flipped { -3 } else { 7 },
+            },
+            Size {
+                width: tie_length as u32 - 4,
+                height: 1,
+            },
+        )
+        .draw_styled(&style, target)?;
 
         Ok(())
     }

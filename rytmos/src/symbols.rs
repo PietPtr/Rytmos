@@ -176,19 +176,19 @@ pub const TIE: (u32, &[u32]) = (5, &[
 
 #[rustfmt::skip]
 pub const FILLED_NOTEHEAD: (u32, &[u32]) = (6, &[
-    pix!("__BB__"),
+    pix!("_BBBB_"),
     pix!("__WW__"),
     pix!("BWWWWB"),
     pix!("__WW__"),
-    pix!("__BB__"),
+    pix!("_BBBB_"),
 ]);
 #[rustfmt::skip]
 pub const EMPTY_NOTEHEAD: (u32, &[u32]) = (6, &[
-    pix!("__BB__"),
+    pix!("_BBBB_"),
     pix!("__WW__"),
     pix!("BW__WB"),
     pix!("__WW__"),
-    pix!("__BB__"),
+    pix!("_BBBB_"),
 ]);
 
 pub fn draw_symbol<D>(
@@ -206,7 +206,7 @@ pub fn draw_symbol_with_direction<D>(
     target: &mut D,
     position: Point,
     symbol: (u32, &[u32]),
-    flip_y: bool,
+    rotate: bool,
 ) -> Result<u32, D::Error>
 where
     D: DrawTarget<Color = BinaryColor>,
@@ -216,7 +216,7 @@ where
     let mut _max_x = 0;
 
     for (y, &line) in symbol.iter().enumerate() {
-        let y_pos = if flip_y {
+        let y_pos = if rotate {
             height - 1 - y as i32
         } else {
             y as i32
@@ -226,7 +226,12 @@ where
 
         for i in (0..=15).rev() {
             let bits = (line >> (i * 2)) & 0b11;
-            let draw_pos = Point::new(position.x + x, position.y + y_pos);
+            let new_x = if rotate {
+                position.x - x
+            } else {
+                position.x + x
+            };
+            let draw_pos = Point::new(new_x, position.y + y_pos);
 
             match bits {
                 0b10 => Pixel(draw_pos, BinaryColor::On).draw(target)?,
