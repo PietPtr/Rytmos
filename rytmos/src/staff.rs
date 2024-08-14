@@ -63,7 +63,7 @@ struct MusicSymbolDefinitions {
 }
 
 impl MusicSymbolDefinitions {
-    const REST_OFFSET: i32 = 14;
+    const REST_OFFSET: i32 = Staff::LEDGER_MARGIN + Staff::LINE_SPACING - 2;
     const DEFAULT_STEM_LENGTH: i32 = 9;
 
     fn new(music: &[Music]) -> Result<Self, EngraveError> {
@@ -423,17 +423,16 @@ impl Music {
 
         let mut x = 0;
         for glyph in glyphs.glyphs.iter_mut() {
-            let beamed = glyph.symbols.len() > 1;
             let glyph_start_x = x;
 
             for symbol in glyph.symbols.iter_mut() {
-                Self::draw_spaced_music_symbol(target, position, x, symbol, beamed)?;
+                Self::draw_spaced_music_symbol(target, position, x, symbol, glyph.beamed)?;
                 symbol.symbol.x = Some(x);
 
                 x += symbol.space;
             }
 
-            if beamed {
+            if glyph.beamed {
                 Self::draw_beams(target, position, glyph_start_x, glyph)?;
             }
         }
@@ -491,6 +490,39 @@ impl Music {
             let line_style = PrimitiveStyle::with_stroke(BinaryColor::On, 1);
             let bg_style = PrimitiveStyle::with_stroke(BinaryColor::Off, 1);
 
+            // If necessary, draw ledger lines
+            let top_ledger_y = Staff::LEDGER_MARGIN;
+            let bottom_ledger_y = Staff::LEDGER_MARGIN + Staff::LINE_SPACING * 4; // or 6?
+
+            if symbol.symbol.y < top_ledger_y {
+                let amount_of_ledgers_necessary =
+                    (top_ledger_y - symbol.symbol.y) / Staff::LINE_SPACING;
+
+                let mut y = top_ledger_y - Staff::LINE_SPACING;
+
+                for _ in 0..amount_of_ledgers_necessary {
+                    let start = Point::new(position.x - 1, y);
+                    let end = Point::new(position.x + 5, y);
+                    Line::new(start, end).draw_styled(&line_style, target)?;
+
+                    y -= Staff::LINE_SPACING;
+                }
+            } else if symbol.symbol.y > bottom_ledger_y {
+                let amount_of_ledgers_necessary =
+                    (symbol.symbol.y - bottom_ledger_y) / Staff::LINE_SPACING + 1;
+
+                let mut y = bottom_ledger_y + Staff::LINE_SPACING;
+
+                for _ in 0..amount_of_ledgers_necessary {
+                    let start = Point::new(position.x - 1, y);
+                    let end = Point::new(position.x + 6, y);
+                    Line::new(start, end).draw_styled(&line_style, target)?;
+
+                    y += Staff::LINE_SPACING;
+                }
+            }
+
+            // Draw the head
             match symbol.symbol.kind {
                 Duration::Whole | Duration::Half => {
                     crate::symbols::draw_symbol(target, position, EMPTY_NOTEHEAD)?
@@ -938,17 +970,18 @@ pub enum Note {
 }
 
 impl Note {
-    const STEM_DIRECTION_SWITCH_HEIGHT: i32 = 17;
+    const C0_OFFSET: i32 = Staff::LEDGER_MARGIN + Staff::LINE_SPACING * (5 + 7) + 2;
+    const STEM_DIRECTION_SWITCH_HEIGHT: i32 = Self::C0_OFFSET - 2 - 3 * 14; // At D3, flip
 
     fn y_offset(self) -> i32 {
         match self {
-            Note::A(_, octave) => 38 - octave * 14,
-            Note::B(_, octave) => 36 - octave * 14,
-            Note::C(_, octave) => 48 - octave * 14,
-            Note::D(_, octave) => 46 - octave * 14,
-            Note::E(_, octave) => 44 - octave * 14,
-            Note::F(_, octave) => 42 - octave * 14,
-            Note::G(_, octave) => 40 - octave * 14,
+            Note::A(_, octave) => Self::C0_OFFSET - 10 - octave * 14,
+            Note::B(_, octave) => Self::C0_OFFSET - 12 - octave * 14,
+            Note::C(_, octave) => Self::C0_OFFSET - octave * 14,
+            Note::D(_, octave) => Self::C0_OFFSET - 2 - octave * 14,
+            Note::E(_, octave) => Self::C0_OFFSET - 4 - octave * 14,
+            Note::F(_, octave) => Self::C0_OFFSET - 6 - octave * 14,
+            Note::G(_, octave) => Self::C0_OFFSET - 8 - octave * 14,
         }
     }
 
@@ -1007,8 +1040,11 @@ pub struct Staff {
 
 impl Staff {
     const LINE_SPACING: i32 = 4;
-    const LEDGER_MARGIN: i32 = 4 * 3;
-    const BASS_CLEF_OFFSET: Point = Point { x: 0, y: 12 };
+    const LEDGER_MARGIN: i32 = Self::LINE_SPACING * 5;
+    const BASS_CLEF_OFFSET: Point = Point {
+        x: 0,
+        y: Self::LEDGER_MARGIN,
+    };
 
     pub fn new(width: u32, position: Point) -> Self {
         Self {

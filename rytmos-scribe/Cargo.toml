@@ -1,0 +1,9 @@
+[package]
+name = "rytmos-scribe"
+version = "0.1.0"
+edition = "2021"
+description = "Generates Rytmos sheet music structs based on user input datastructures"
+
+[dependencies]
+test-case = "3.3.1"
+rytmos = { path = "../rytmos" }

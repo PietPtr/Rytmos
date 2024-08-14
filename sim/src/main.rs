@@ -19,19 +19,19 @@ fn main() -> Result<(), core::convert::Infallible> {
         StaffElement::Clef(Clef::Bass),
         StaffElement::Music(&[
             Music::Note(
-                Note::A(Accidental::Natural, 1),
+                Note::A(Accidental::Natural, 2),
                 staff::Duration::DottedEighth,
             ),
-            Music::Note(Note::B(Accidental::Natural, 1), staff::Duration::Sixteenth),
+            Music::Note(Note::B(Accidental::Natural, 2), staff::Duration::Sixteenth),
             Music::Rest(staff::Duration::Eighth),
-            Music::Note(Note::F(Accidental::Sharp, 2), staff::Duration::Eighth),
+            Music::Note(Note::F(Accidental::Sharp, 3), staff::Duration::Eighth),
             Music::Tie,
-            Music::Note(Note::C(Accidental::Sharp, 2), staff::Duration::Eighth),
-            Music::Note(Note::D(Accidental::Natural, 2), staff::Duration::Eighth),
-            Music::Note(Note::G(Accidental::Natural, 2), staff::Duration::Sixteenth),
-            Music::Note(Note::F(Accidental::Sharp, 2), staff::Duration::Sixteenth),
-            Music::Note(Note::A(Accidental::Flat, 2), staff::Duration::Sixteenth),
-            Music::Note(Note::E(Accidental::Natural, 2), staff::Duration::Sixteenth),
+            Music::Note(Note::F(Accidental::Sharp, 3), staff::Duration::Eighth),
+            Music::Note(Note::D(Accidental::Natural, 3), staff::Duration::Eighth),
+            Music::Note(Note::G(Accidental::Natural, 3), staff::Duration::Sixteenth),
+            Music::Note(Note::F(Accidental::Sharp, 3), staff::Duration::Sixteenth),
+            Music::Note(Note::A(Accidental::Flat, 3), staff::Duration::Sixteenth),
+            Music::Note(Note::E(Accidental::Natural, 3), staff::Duration::Sixteenth),
         ]),
     ];
 
@@ -50,43 +50,43 @@ fn main() -> Result<(), core::convert::Infallible> {
         StaffElement::Clef(Clef::Bass),
         StaffElement::Music(&[
             Music::Rest(staff::Duration::Sixteenth),
-            Music::Note(Note::C(Accidental::Natural, 2), staff::Duration::Sixteenth),
+            Music::Note(Note::C(Accidental::Natural, 3), staff::Duration::Sixteenth),
             Music::Rest(staff::Duration::Sixteenth),
-            Music::Note(Note::C(Accidental::Natural, 2), staff::Duration::Sixteenth),
+            Music::Note(Note::C(Accidental::Natural, 3), staff::Duration::Sixteenth),
             Music::Rest(staff::Duration::Sixteenth),
-            Music::Note(Note::C(Accidental::Natural, 2), staff::Duration::Sixteenth),
+            Music::Note(Note::C(Accidental::Natural, 3), staff::Duration::Sixteenth),
             Music::Rest(staff::Duration::Sixteenth),
-            Music::Note(Note::C(Accidental::Natural, 2), staff::Duration::Sixteenth),
+            Music::Note(Note::C(Accidental::Natural, 3), staff::Duration::Sixteenth),
             Music::Rest(staff::Duration::Sixteenth),
-            Music::Note(Note::C(Accidental::Natural, 2), staff::Duration::Sixteenth),
+            Music::Note(Note::C(Accidental::Natural, 3), staff::Duration::Sixteenth),
             Music::Rest(staff::Duration::Sixteenth),
-            Music::Note(Note::C(Accidental::Natural, 2), staff::Duration::Sixteenth),
+            Music::Note(Note::C(Accidental::Natural, 3), staff::Duration::Sixteenth),
             Music::Rest(staff::Duration::Sixteenth),
-            Music::Note(Note::C(Accidental::Natural, 2), staff::Duration::Sixteenth),
+            Music::Note(Note::C(Accidental::Natural, 3), staff::Duration::Sixteenth),
             Music::Rest(staff::Duration::Sixteenth),
-            Music::Note(Note::C(Accidental::Natural, 2), staff::Duration::Sixteenth),
+            Music::Note(Note::C(Accidental::Natural, 3), staff::Duration::Sixteenth),
         ]),
     ];
 
     let beamed_sixteenths_and_eighths = vec![
         StaffElement::Clef(Clef::Bass),
         StaffElement::Music(&[
-            Music::Note(Note::A(Accidental::Natural, 1), staff::Duration::Sixteenth),
-            Music::Note(Note::A(Accidental::Natural, 1), staff::Duration::Sixteenth),
-            Music::Note(Note::A(Accidental::Natural, 1), staff::Duration::Sixteenth),
-            Music::Note(Note::A(Accidental::Natural, 1), staff::Duration::Sixteenth),
             Music::Note(Note::A(Accidental::Natural, 2), staff::Duration::Sixteenth),
             Music::Note(Note::A(Accidental::Natural, 2), staff::Duration::Sixteenth),
             Music::Note(Note::A(Accidental::Natural, 2), staff::Duration::Sixteenth),
             Music::Note(Note::A(Accidental::Natural, 2), staff::Duration::Sixteenth),
-            Music::Note(Note::B(Accidental::Natural, 1), staff::Duration::Sixteenth),
-            Music::Note(Note::B(Accidental::Natural, 1), staff::Duration::Sixteenth),
-            Music::Note(Note::B(Accidental::Natural, 1), staff::Duration::Sixteenth),
-            Music::Note(Note::B(Accidental::Natural, 1), staff::Duration::Sixteenth),
+            Music::Note(Note::A(Accidental::Natural, 3), staff::Duration::Sixteenth),
+            Music::Note(Note::A(Accidental::Natural, 3), staff::Duration::Sixteenth),
+            Music::Note(Note::A(Accidental::Natural, 3), staff::Duration::Sixteenth),
+            Music::Note(Note::A(Accidental::Natural, 3), staff::Duration::Sixteenth),
             Music::Note(Note::B(Accidental::Natural, 2), staff::Duration::Sixteenth),
             Music::Note(Note::B(Accidental::Natural, 2), staff::Duration::Sixteenth),
             Music::Note(Note::B(Accidental::Natural, 2), staff::Duration::Sixteenth),
             Music::Note(Note::B(Accidental::Natural, 2), staff::Duration::Sixteenth),
+            Music::Note(Note::B(Accidental::Natural, 3), staff::Duration::Sixteenth),
+            Music::Note(Note::B(Accidental::Natural, 3), staff::Duration::Sixteenth),
+            Music::Note(Note::B(Accidental::Natural, 3), staff::Duration::Sixteenth),
+            Music::Note(Note::B(Accidental::Natural, 3), staff::Duration::Sixteenth),
         ]),
     ];
 
@@ -94,21 +94,21 @@ fn main() -> Result<(), core::convert::Infallible> {
         StaffElement::Clef(Clef::Bass),
         StaffElement::Music(&[
             // 1 e + a
-            Music::Note(Note::A(Accidental::Natural, 1), staff::Duration::Sixteenth),
-            Music::Note(Note::A(Accidental::Natural, 1), staff::Duration::Sixteenth),
-            Music::Note(Note::A(Accidental::Natural, 1), staff::Duration::Eighth),
+            Music::Note(Note::A(Accidental::Natural, 2), staff::Duration::Sixteenth),
+            Music::Note(Note::A(Accidental::Natural, 2), staff::Duration::Sixteenth),
+            Music::Note(Note::A(Accidental::Natural, 2), staff::Duration::Eighth),
             // 2 e + a
-            Music::Note(Note::A(Accidental::Natural, 1), staff::Duration::Sixteenth),
-            Music::Note(Note::A(Accidental::Natural, 1), staff::Duration::Eighth),
-            Music::Note(Note::A(Accidental::Natural, 1), staff::Duration::Sixteenth),
+            Music::Note(Note::A(Accidental::Natural, 2), staff::Duration::Sixteenth),
+            Music::Note(Note::A(Accidental::Natural, 2), staff::Duration::Eighth),
+            Music::Note(Note::A(Accidental::Natural, 2), staff::Duration::Sixteenth),
             // 3 e + a
-            Music::Note(Note::A(Accidental::Natural, 1), staff::Duration::Eighth),
-            Music::Note(Note::A(Accidental::Natural, 1), staff::Duration::Sixteenth),
-            Music::Note(Note::A(Accidental::Natural, 1), staff::Duration::Sixteenth),
+            Music::Note(Note::A(Accidental::Natural, 2), staff::Duration::Eighth),
+            Music::Note(Note::A(Accidental::Natural, 2), staff::Duration::Sixteenth),
+            Music::Note(Note::A(Accidental::Natural, 2), staff::Duration::Sixteenth),
             // 4 e + a
-            Music::Note(Note::A(Accidental::Natural, 1), staff::Duration::Sixteenth),
+            Music::Note(Note::A(Accidental::Natural, 2), staff::Duration::Sixteenth),
             Music::Note(
-                Note::A(Accidental::Natural, 1),
+                Note::A(Accidental::Natural, 2),
                 staff::Duration::DottedEighth,
             ),
         ]),
@@ -118,24 +118,24 @@ fn main() -> Result<(), core::convert::Infallible> {
         StaffElement::Clef(Clef::Bass),
         StaffElement::Music(&[
             // 1 e + a
-            Music::Note(Note::C(Accidental::Natural, 2), staff::Duration::Sixteenth),
-            Music::Note(Note::B(Accidental::Natural, 1), staff::Duration::Sixteenth),
-            Music::Note(Note::B(Accidental::Natural, 1), staff::Duration::Eighth),
+            Music::Note(Note::C(Accidental::Natural, 3), staff::Duration::Sixteenth),
+            Music::Note(Note::B(Accidental::Natural, 2), staff::Duration::Sixteenth),
+            Music::Note(Note::B(Accidental::Natural, 2), staff::Duration::Eighth),
             Music::Tie,
             // 2 e + a
-            Music::Note(Note::B(Accidental::Natural, 1), staff::Duration::Sixteenth),
-            Music::Note(Note::C(Accidental::Natural, 2), staff::Duration::Eighth),
-            Music::Note(Note::E(Accidental::Natural, 2), staff::Duration::Sixteenth),
+            Music::Note(Note::B(Accidental::Natural, 2), staff::Duration::Sixteenth),
+            Music::Note(Note::C(Accidental::Natural, 3), staff::Duration::Eighth),
+            Music::Note(Note::E(Accidental::Natural, 3), staff::Duration::Sixteenth),
             Music::Tie,
             // 3 e + a
-            Music::Note(Note::E(Accidental::Natural, 2), staff::Duration::Eighth),
-            Music::Note(Note::D(Accidental::Natural, 2), staff::Duration::Sixteenth),
-            Music::Note(Note::F(Accidental::Natural, 2), staff::Duration::Sixteenth),
+            Music::Note(Note::E(Accidental::Natural, 3), staff::Duration::Eighth),
+            Music::Note(Note::D(Accidental::Natural, 3), staff::Duration::Sixteenth),
+            Music::Note(Note::F(Accidental::Natural, 3), staff::Duration::Sixteenth),
             Music::Tie,
             // 4 e + a
-            Music::Note(Note::F(Accidental::Natural, 2), staff::Duration::Sixteenth),
+            Music::Note(Note::F(Accidental::Natural, 3), staff::Duration::Sixteenth),
             Music::Note(
-                Note::A(Accidental::Natural, 2),
+                Note::A(Accidental::Natural, 3),
                 staff::Duration::DottedEighth,
             ),
         ]),
@@ -150,47 +150,55 @@ fn main() -> Result<(), core::convert::Infallible> {
         ]),
     ];
 
-    // TODO: multimeasure support in staff drawing? or responsibility of user?
-    let _all_quarters = vec![
-        StaffElement::Clef(Clef::Bass),
-        StaffElement::Music(&[
-            Music::Note(Note::D(Accidental::Natural, 2), staff::Duration::Quarter),
-            Music::Note(Note::F(Accidental::Natural, 2), staff::Duration::Quarter),
-            Music::Note(Note::A(Accidental::Natural, 2), staff::Duration::Quarter),
-            Music::Note(Note::C(Accidental::Natural, 2), staff::Duration::Quarter),
-        ]),
-        StaffElement::Barline,
-        StaffElement::Music(&[
-            Music::Note(Note::G(Accidental::Natural, 2), staff::Duration::Quarter),
-            Music::Note(Note::B(Accidental::Natural, 2), staff::Duration::Quarter),
-            Music::Note(Note::D(Accidental::Natural, 2), staff::Duration::Quarter),
-            Music::Note(Note::F(Accidental::Natural, 2), staff::Duration::Quarter),
-        ]),
-        StaffElement::Barline,
-        StaffElement::Music(&[
-            Music::Note(Note::C(Accidental::Natural, 2), staff::Duration::Quarter),
-            Music::Note(Note::E(Accidental::Natural, 2), staff::Duration::Quarter),
-            Music::Note(Note::G(Accidental::Natural, 2), staff::Duration::Quarter),
-            Music::Note(Note::B(Accidental::Natural, 2), staff::Duration::Quarter),
-        ]),
-    ];
-
     let flags = vec![
         StaffElement::Clef(Clef::Bass),
         StaffElement::Music(&[
-            Music::Note(Note::A(Accidental::Natural, 1), staff::Duration::Eighth),
-            Music::Rest(staff::Duration::Eighth),
             Music::Note(Note::A(Accidental::Natural, 2), staff::Duration::Eighth),
             Music::Rest(staff::Duration::Eighth),
-            Music::Note(Note::A(Accidental::Natural, 1), staff::Duration::Sixteenth),
-            Music::Rest(staff::Duration::Sixteenth),
+            Music::Note(Note::A(Accidental::Natural, 3), staff::Duration::Eighth),
+            Music::Rest(staff::Duration::Eighth),
             Music::Note(Note::A(Accidental::Natural, 2), staff::Duration::Sixteenth),
+            Music::Rest(staff::Duration::Sixteenth),
+            Music::Note(Note::A(Accidental::Natural, 3), staff::Duration::Sixteenth),
             Music::Rest(staff::Duration::Sixteenth),
             Music::Rest(staff::Duration::Quarter),
         ]),
     ];
 
+    // TODO: all this is an octave transposed (fix now, then make configurable once we synth)
+    let ledgers = vec![
+        StaffElement::Clef(Clef::Bass),
+        StaffElement::Music(&[
+            Music::Note(Note::E(Accidental::Natural, 2), staff::Duration::Sixteenth),
+            Music::Note(Note::D(Accidental::Natural, 2), staff::Duration::Sixteenth),
+            Music::Note(Note::C(Accidental::Natural, 2), staff::Duration::Sixteenth),
+            Music::Rest(staff::Duration::Sixteenth),
+            Music::Note(Note::A(Accidental::Natural, 1), staff::Duration::Sixteenth),
+            Music::Note(Note::G(Accidental::Natural, 1), staff::Duration::Sixteenth),
+            Music::Note(Note::F(Accidental::Natural, 1), staff::Duration::Sixteenth),
+            Music::Rest(staff::Duration::Sixteenth),
+            Music::Note(Note::C(Accidental::Natural, 4), staff::Duration::Sixteenth),
+            Music::Note(Note::D(Accidental::Natural, 4), staff::Duration::Sixteenth),
+            Music::Note(Note::E(Accidental::Natural, 4), staff::Duration::Sixteenth),
+            Music::Rest(staff::Duration::Sixteenth),
+            Music::Note(Note::G(Accidental::Natural, 4), staff::Duration::Sixteenth),
+            Music::Note(Note::A(Accidental::Natural, 4), staff::Duration::Sixteenth),
+            Music::Rest(staff::Duration::Sixteenth),
+            Music::Note(Note::C(Accidental::Natural, 5), staff::Duration::Sixteenth),
+        ]),
+    ];
+
+    let treble = vec![
+        StaffElement::Clef(Clef::Treble),
+        StaffElement::Music(&[Music::Note(
+            Note::A(Accidental::Natural, 1),
+            staff::Duration::Eighth,
+        )]),
+    ];
+
     let examples = &[
+        ledgers,
+        treble,
         ties,
         disconnected_beams,
         beamed_sixteenths_and_eighths,
