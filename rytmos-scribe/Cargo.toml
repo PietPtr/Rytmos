@@ -7,3 +7,5 @@ description = "Generates Rytmos sheet music structs based on user input datastru
 [dependencies]
 test-case = "3.3.1"
 rytmos = { path = "../rytmos" }
+embedded-graphics = "0.8.1"
+heapless = "0.8.0"

@@ -32,7 +32,7 @@ pub enum StaffElement<'a> {
     Clef(Clef),
 }
 
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub enum Music {
     Note(Note, Duration),
     Rest(Duration),
@@ -524,7 +524,7 @@ impl Music {
 
             // Draw the head
             match symbol.symbol.kind {
-                Duration::Whole | Duration::Half => {
+                Duration::Whole | Duration::Half | Duration::DottedHalf => {
                     crate::symbols::draw_symbol(target, position, EMPTY_NOTEHEAD)?
                 }
                 _ => crate::symbols::draw_symbol(target, position, FILLED_NOTEHEAD)?,
@@ -949,7 +949,7 @@ impl Duration {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub enum Accidental {
     Natural,
     Sharp,
@@ -958,7 +958,7 @@ pub enum Accidental {
     DoubleFlat,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum Note {
     A(Accidental, i32),
     B(Accidental, i32),

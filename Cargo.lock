@@ -225,6 +225,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "demo"
+version = "0.1.0"
+dependencies = [
+ "defmt",
+ "defmt-rtt",
+ "embedded-graphics",
+ "embedded-graphics-simulator",
+ "env_logger",
+ "log",
+ "rytmos",
+ "rytmos-scribe",
+]
+
+[[package]]
 name = "either"
 version = "1.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -594,7 +608,6 @@ name = "rytmos"
 version = "0.1.0"
 dependencies = [
  "embedded-graphics",
- "embedded-graphics-simulator",
  "heapless",
  "log",
 ]
@@ -603,6 +616,8 @@ dependencies = [
 name = "rytmos-scribe"
 version = "0.1.0"
 dependencies = [
+ "embedded-graphics",
+ "heapless",
  "rytmos",
  "test-case",
 ]

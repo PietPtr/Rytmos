@@ -1,6 +1,8 @@
 [workspace]
 members = [
-    "rytmos", "rytmos-scribe",
-    "sim"
+    "rytmos", 
+    "rytmos-scribe",
+    "sim",
+    "demo",
 ]
 resolver = "2"
