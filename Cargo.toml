@@ -3,6 +3,6 @@ members = [
     "rytmos", 
     "rytmos-scribe",
     "sim",
-    "demo",
+    "demo", "rytmos-synth",
 ]
 resolver = "2"

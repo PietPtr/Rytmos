@@ -155,7 +155,9 @@ impl PlayDefinition {
                                 16 => Dur::Whole,
                                 _ => unreachable!(),
                             };
-                            music.push(note(duration_enum));
+                            music
+                                .push(note(duration_enum))
+                                .map_err(|_| ScribeError::VecFull)?;
                             beat_pos = (beat_pos + duration) % 4;
                             continue;
                         }
@@ -185,14 +187,16 @@ impl PlayDefinition {
                     let mut after_first_beat_duration = duration - length_in_current_beat;
 
                     if after_first_beat_duration > 0 {
-                        music.push(Music::Tie);
+                        music.push(Music::Tie).map_err(|_| ScribeError::VecFull)?;
                     }
 
                     for _ in 0..(after_first_beat_duration / 4) {
-                        music.push(note(Dur::Quarter));
+                        music
+                            .push(note(Dur::Quarter))
+                            .map_err(|_| ScribeError::VecFull)?;
                         after_first_beat_duration -= 4;
                         if after_first_beat_duration > 0 {
-                            music.push(Music::Tie);
+                            music.push(Music::Tie).map_err(|_| ScribeError::VecFull)?;
                         }
                     }
 
@@ -236,7 +240,9 @@ impl PlayDefinition {
                                 16 => Dur::Whole,
                                 _ => unreachable!(),
                             };
-                            music.push(rest(duration_enum));
+                            music
+                                .push(rest(duration_enum))
+                                .map_err(|_| ScribeError::VecFull)?;
                             beat_pos = (beat_pos + duration) % 4;
                             continue;
                         }
@@ -266,7 +272,9 @@ impl PlayDefinition {
                     let mut after_first_beat_duration = duration - length_in_current_beat;
 
                     for _ in 0..(after_first_beat_duration / 4) {
-                        music.push(rest(Dur::Quarter));
+                        music
+                            .push(rest(Dur::Quarter))
+                            .map_err(|_| ScribeError::VecFull)?;
                         after_first_beat_duration -= 4;
                     }
 

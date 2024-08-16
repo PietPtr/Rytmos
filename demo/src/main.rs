@@ -12,7 +12,7 @@ use embedded_graphics_simulator::{
 };
 use env_logger::{Builder, Env};
 use log::LevelFilter;
-use rytmos::staff::{self, Accidental, Clef, Music, Note, Staff, StaffElement};
+use rytmos::staff::{Clef, Staff, StaffElement};
 use rytmos_scribe::sixteen_switches::{MeasureState, PlayDefinition, SwitchState};
 
 fn main() -> Result<(), core::convert::Infallible> {
@@ -109,5 +109,4 @@ fn mod_state(
     if let Some((sixteenth, state)) = find_keycode_position(keymod, keycode) {
         states.set(sixteenth, state).unwrap();
     }
-    dbg!(states);
 }
