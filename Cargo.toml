@@ -3,6 +3,7 @@ members = [
     "rytmos-engrave", 
     "rytmos-scribe",
     "rytmos-synth",
+    "rytmos-ui",
     "sim",
     "demo", 
 ]

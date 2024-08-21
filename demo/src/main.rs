@@ -1,4 +1,7 @@
-use std::{thread, time::Duration};
+use std::{
+    thread,
+    time::{Duration, Instant},
+};
 
 use defmt_rtt as _;
 use embedded_graphics::{
@@ -11,9 +14,10 @@ use embedded_graphics_simulator::{
     BinaryColorTheme, OutputSettingsBuilder, SimulatorDisplay, SimulatorEvent, Window,
 };
 use env_logger::{Builder, Env};
-use log::LevelFilter;
+use log::{info, LevelFilter};
 use rytmos_engrave::staff::{Clef, Staff, StaffElement};
 use rytmos_scribe::sixteen_switches::{MeasureState, PlayDefinition, SwitchState};
+use rytmos_ui::play_analysis::PlayAnalysis;
 
 fn main() -> Result<(), core::convert::Infallible> {
     Builder::from_env(Env::default().default_filter_or(LevelFilter::Trace.to_string())).init();
@@ -30,7 +34,12 @@ fn main() -> Result<(), core::convert::Infallible> {
 
     let staff = Staff::new(display_size.width, Point::new(0, 0));
 
+    let mut analysis = PlayAnalysis::new(PlayDefinition::default());
+
     let mut states = MeasureState::default();
+
+    let mut now = Instant::now();
+    let mut ringing = false;
 
     'main: loop {
         Rectangle::new(Point::zero(), display_size)
@@ -38,12 +47,16 @@ fn main() -> Result<(), core::convert::Infallible> {
             .draw(&mut display)?;
 
         let play_def = PlayDefinition::try_from(states).unwrap();
+        analysis.set_rhythm(play_def.clone());
+        analysis.step(ringing);
         let music = play_def.to_music().unwrap();
 
         staff.draw(
             &mut display,
             &[StaffElement::Clef(Clef::Bass), StaffElement::Music(&music)],
         )?;
+
+        analysis.draw(&mut display, Point { x: 0, y: 50 })?;
 
         states.draw(&mut display, Point { x: 0, y: 0 })?;
 
@@ -55,13 +68,35 @@ fn main() -> Result<(), core::convert::Infallible> {
                     keycode,
                     keymod,
                     repeat: false,
-                } => mod_state(&mut states, keycode, keymod),
+                } => {
+                    mod_state(&mut states, keycode, keymod);
+
+                    match keycode {
+                        Keycode::Space => {
+                            ringing = true;
+                        }
+                        _ => (),
+                    };
+                }
+                SimulatorEvent::KeyUp {
+                    keycode,
+                    keymod: _,
+                    repeat: false,
+                } => {
+                    match keycode {
+                        Keycode::Space => {
+                            ringing = false;
+                        }
+                        _ => (),
+                    };
+                }
                 SimulatorEvent::Quit => break 'main,
                 _ => (),
             }
         }
 
-        thread::sleep(Duration::from_millis(25));
+        while now.elapsed().as_millis() < PlayAnalysis::step_size_ms(60) as u128 {}
+        now = Instant::now();
     }
 
     Ok(())

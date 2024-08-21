@@ -14,7 +14,7 @@ pub struct SineSynth {
 impl SineSynth {
     pub fn new(frequency: f32, gain: f32, initial_phase: f32, decay_per_second: f32) -> Self {
         let phase_inc = frequency / SAMPLE_RATE;
-        let decay = decay_per_second.powf(1. / SAMPLE_RATE).min(1.0);
+        let decay = libm::powf(decay_per_second, 1. / SAMPLE_RATE).min(1.0);
         Self {
             phase: initial_phase,
             phase_inc,
@@ -23,24 +23,8 @@ impl SineSynth {
         }
     }
 
-    // TODO: move these to a float lib
     fn lerp(a: i16, b: i16, t: f32) -> i16 {
         ((1.0 - t) * (a as f32) + t * (b as f32)) as i16
-    }
-
-    fn fract(x: f32) -> f32 {
-        x - (x as i64 as f32)
-    }
-
-    fn round(x: f32) -> f32 {
-        let floored = (x as u64) as f32;
-        let decimal_part = x - floored;
-
-        if decimal_part < 0.5 {
-            floored
-        } else {
-            floored + 1.0
-        }
     }
 }
 
@@ -58,14 +42,14 @@ impl Iterator for SineSynth {
             _ => panic!("Impossible phase"),
         };
 
-        let idx_in_part = (4. * (Self::fract(self.phase) % 0.25)) * (table_size - 1.0);
+        let idx_in_part = (4. * (libm::modff(self.phase).0 % 0.25)) * (table_size - 1.0);
         let idx_float = if flip_index {
             table_size - 1.0 - idx_in_part
         } else {
             idx_in_part
         };
 
-        let idx = Self::round(idx_float) as usize;
+        let idx = libm::roundf(idx_float as f32) as usize;
         let next_idx = match (idx, flip_index) {
             (0, _) => 1,
             (idx, _) if idx == SINE_WAVE.len() - 1 => idx - 1,
@@ -85,3 +69,5 @@ impl Iterator for SineSynth {
         Some(sample)
     }
 }
+
+// TODO: Add metronome synth, given a tempo generates ticks with emphasis on 1.

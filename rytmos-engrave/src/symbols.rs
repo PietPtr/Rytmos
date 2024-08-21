@@ -182,6 +182,7 @@ pub const FILLED_NOTEHEAD: (u32, &[u32]) = (6, &[
     pix!("__WW__"),
     pix!("_BBBB_"),
 ]);
+
 #[rustfmt::skip]
 pub const EMPTY_NOTEHEAD: (u32, &[u32]) = (6, &[
     pix!("_BBBB_"),
@@ -189,6 +190,62 @@ pub const EMPTY_NOTEHEAD: (u32, &[u32]) = (6, &[
     pix!("BW__WB"),
     pix!("__WW__"),
     pix!("_BBBB_"),
+]);
+
+#[rustfmt::skip]
+pub const BEAT_ONE: (u32, &[u32]) = (3, &[
+    pix!("_W_"),
+    pix!("WW_"),
+    pix!("_W_"),
+    pix!("_W_"),
+]);
+
+#[rustfmt::skip]
+pub const BEAT_TWO: (u32, &[u32]) = (3, &[
+    pix!("WWW"),
+    pix!("__W"),
+    pix!("WW_"),
+    pix!("WWW"),
+]);
+
+#[rustfmt::skip]
+pub const BEAT_THREE: (u32, &[u32]) = (3, &[
+    pix!("WWW"),
+    pix!("_WW"),
+    pix!("__W"),
+    pix!("WWW"),
+]);
+
+#[rustfmt::skip]
+pub const BEAT_FOUR: (u32, &[u32]) = (3, &[
+    pix!("W_W"),
+    pix!("W_W"),
+    pix!("WWW"),
+    pix!("__W"),
+]);
+
+#[rustfmt::skip]
+pub const BEAT_E: (u32, &[u32]) = (3, &[
+    pix!("___"),
+    pix!("WW_"),
+    pix!("W__"),
+    pix!("WW_"),
+]);
+
+#[rustfmt::skip]
+pub const BEAT_AND: (u32, &[u32]) = (3, &[
+    pix!("___"),
+    pix!("_W_"),
+    pix!("WWW"),
+    pix!("_W_"),
+]);
+
+#[rustfmt::skip]
+pub const BEAT_A: (u32, &[u32]) = (3, &[
+    pix!("___"),
+    pix!("_W_"),
+    pix!("W_W"),
+    pix!("W_W"),
 ]);
 
 pub fn draw_symbol<D>(

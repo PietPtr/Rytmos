@@ -111,9 +111,9 @@ impl StringState {
 
 /// Defines when a string is ringing and for how long. Converted from MeasureState,
 /// and converted into Rytmos notation
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct PlayDefinition {
-    sixteenths: Vec<StringState, 16>,
+    pub sixteenths: Vec<StringState, 16>,
 }
 
 impl PlayDefinition {
