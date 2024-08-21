@@ -12,7 +12,7 @@ use embedded_graphics_simulator::{
 };
 use env_logger::{Builder, Env};
 use log::LevelFilter;
-use rytmos::staff::{self, Accidental, Clef, Music, Note, Staff, StaffElement};
+use rytmos_engrave::staff::{self, Accidental, Clef, Music, Note, Staff, StaffElement};
 
 fn main() -> Result<(), core::convert::Infallible> {
     let music1 = vec![

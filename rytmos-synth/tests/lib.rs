@@ -24,10 +24,10 @@ fn test_sine_synth() {
     let mut synth = SineSynth::new(80.0, 1.0, 0.1, 0.2);
     let samples_2: Vec<i16> = (0..SAMPLES).map(|_| synth.next().unwrap()).collect();
 
-    let mut synth = SineSynth::new(160.0, 0.13, 0.9, 0.01);
+    let mut synth = SineSynth::new(160.0, 0.53, 0.9, 0.01);
     let samples_3: Vec<i16> = (0..SAMPLES).map(|_| synth.next().unwrap()).collect();
 
-    let mut synth = SineSynth::new(320.0, 0.06, 0.5, 0.01);
+    let mut synth = SineSynth::new(320.0, 0.26, 0.5, 0.01);
     let samples_4: Vec<i16> = (0..SAMPLES).map(|_| synth.next().unwrap()).collect();
 
     let components = vec![samples, samples_2, samples_3, samples_4];
@@ -40,7 +40,7 @@ fn test_sine_synth() {
             .collect()
     });
 
-    plot_samples(&signal[..4410]).unwrap();
+    plot_samples(&signal[..22000]).unwrap();
 
     export_to_wav(signal, "signal.wav");
 }

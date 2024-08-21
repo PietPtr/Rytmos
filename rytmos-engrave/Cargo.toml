@@ -1,5 +1,5 @@
 [package]
-name = "rytmos"
+name = "rytmos-engrave"
 version = "0.1.0"
 edition = "2021"
 description = "Music notation renderer for embedded devices"

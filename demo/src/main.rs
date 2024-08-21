@@ -12,7 +12,7 @@ use embedded_graphics_simulator::{
 };
 use env_logger::{Builder, Env};
 use log::LevelFilter;
-use rytmos::staff::{Clef, Staff, StaffElement};
+use rytmos_engrave::staff::{Clef, Staff, StaffElement};
 use rytmos_scribe::sixteen_switches::{MeasureState, PlayDefinition, SwitchState};
 
 fn main() -> Result<(), core::convert::Infallible> {

@@ -12,5 +12,5 @@ embedded-graphics = "0.8.1"
 embedded-graphics-simulator = "0.6.0"
 env_logger = "0.11.3"
 log = "0.4.22"
-rytmos = { path = "../rytmos" }
+rytmos-engrave = { path = "../rytmos-engrave" }
 rytmos-scribe = { path = "../rytmos-scribe" }

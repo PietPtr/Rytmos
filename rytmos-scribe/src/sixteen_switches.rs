@@ -2,8 +2,8 @@ use embedded_graphics::pixelcolor::BinaryColor;
 use embedded_graphics::prelude::*;
 use embedded_graphics::primitives::{PrimitiveStyle, Rectangle, StyledDrawable};
 use heapless::Vec;
-use rytmos::staff::{Accidental, Duration as Dur};
-use rytmos::staff::{Music, Note};
+use rytmos_engrave::staff::{Accidental, Duration as Dur};
+use rytmos_engrave::staff::{Music, Note};
 
 /// Generates Rytmos sheet music based on the states of sixteen tri state switches.
 /// The switches states mean:

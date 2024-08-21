@@ -1,5 +1,3 @@
-use log::debug;
-
 use crate::wavetables::SINE_WAVE;
 
 pub const SAMPLE_RATE: f32 = 44100.0;
