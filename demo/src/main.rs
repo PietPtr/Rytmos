@@ -1,7 +1,4 @@
-use std::{
-    thread,
-    time::{Duration, Instant},
-};
+use std::time::Instant;
 
 use defmt_rtt as _;
 use embedded_graphics::{
@@ -14,7 +11,7 @@ use embedded_graphics_simulator::{
     BinaryColorTheme, OutputSettingsBuilder, SimulatorDisplay, SimulatorEvent, Window,
 };
 use env_logger::{Builder, Env};
-use log::{info, LevelFilter};
+use log::LevelFilter;
 use rytmos_engrave::staff::{Clef, Staff, StaffElement};
 use rytmos_scribe::sixteen_switches::{MeasureState, PlayDefinition, SwitchState};
 use rytmos_ui::play_analysis::PlayAnalysis;
@@ -70,25 +67,18 @@ fn main() -> Result<(), core::convert::Infallible> {
                     repeat: false,
                 } => {
                     mod_state(&mut states, keycode, keymod);
-
-                    match keycode {
-                        Keycode::Space => {
-                            ringing = true;
-                        }
-                        _ => (),
-                    };
+                    if keycode == Keycode::Space {
+                        ringing = true;
+                    }
                 }
                 SimulatorEvent::KeyUp {
                     keycode,
                     keymod: _,
                     repeat: false,
                 } => {
-                    match keycode {
-                        Keycode::Space => {
-                            ringing = false;
-                        }
-                        _ => (),
-                    };
+                    if keycode == Keycode::Space {
+                        ringing = false;
+                    }
                 }
                 SimulatorEvent::Quit => break 'main,
                 _ => (),

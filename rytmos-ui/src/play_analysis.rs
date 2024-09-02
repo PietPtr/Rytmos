@@ -41,7 +41,7 @@ impl PlayAnalysis {
     }
 
     pub fn step_size_ms(bpm: u32) -> u32 {
-        libm::roundf((60_000.0 / bpm as f32) as f32 / 32.0) as u32
+        libm::roundf((60_000.0 / bpm as f32) / 32.0) as u32
     }
 
     pub fn set_rhythm(&mut self, rhythm: PlayDefinition) {

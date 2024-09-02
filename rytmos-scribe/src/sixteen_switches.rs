@@ -66,7 +66,7 @@ impl MeasureState {
             };
 
             Rectangle::new(
-                position + Point { x: i as i32, y: y },
+                position + Point { x: i as i32, y },
                 Size {
                     width: 1,
                     height: 1,
@@ -134,7 +134,7 @@ impl PlayDefinition {
     /// Uses the fact that a playdefinition is always exactly 1 measure (checked in new)
     pub fn to_music(&self) -> Result<Vec<Music, 16>, ScribeError> {
         let note = |dur| Music::Note(Note::C(Accidental::Natural, 3), dur);
-        let rest = |dur| Music::Rest(dur);
+        let rest = Music::Rest;
 
         let mut music = Vec::new();
 
@@ -146,22 +146,19 @@ impl PlayDefinition {
                     let length_in_current_beat = (4 - beat_pos).min(*i);
 
                     // Catch some special cases first
-                    match (beat_pos, duration) {
-                        (0, 6 | 8 | 12 | 16) => {
-                            let duration_enum = match duration {
-                                6 => Dur::DottedQuarter,
-                                8 => Dur::Half,
-                                12 => Dur::DottedHalf,
-                                16 => Dur::Whole,
-                                _ => unreachable!(),
-                            };
-                            music
-                                .push(note(duration_enum))
-                                .map_err(|_| ScribeError::VecFull)?;
-                            beat_pos = (beat_pos + duration) % 4;
-                            continue;
-                        }
-                        _ => (),
+                    if let (0, 6 | 8 | 12 | 16) = (beat_pos, duration) {
+                        let duration_enum = match duration {
+                            6 => Dur::DottedQuarter,
+                            8 => Dur::Half,
+                            12 => Dur::DottedHalf,
+                            16 => Dur::Whole,
+                            _ => unreachable!(),
+                        };
+                        music
+                            .push(note(duration_enum))
+                            .map_err(|_| ScribeError::VecFull)?;
+                        beat_pos = (beat_pos + duration) % 4;
+                        continue;
                     }
 
                     match length_in_current_beat {
@@ -231,22 +228,19 @@ impl PlayDefinition {
                     let length_in_current_beat = (4 - beat_pos).min(*i);
 
                     // Catch some special cases first
-                    match (beat_pos, duration) {
-                        (0, 6 | 8 | 12 | 16) => {
-                            let duration_enum = match duration {
-                                6 => Dur::DottedQuarter,
-                                8 => Dur::Half,
-                                12 => Dur::DottedHalf,
-                                16 => Dur::Whole,
-                                _ => unreachable!(),
-                            };
-                            music
-                                .push(rest(duration_enum))
-                                .map_err(|_| ScribeError::VecFull)?;
-                            beat_pos = (beat_pos + duration) % 4;
-                            continue;
-                        }
-                        _ => (),
+                    if let (0, 6 | 8 | 12 | 16) = (beat_pos, duration) {
+                        let duration_enum = match duration {
+                            6 => Dur::DottedQuarter,
+                            8 => Dur::Half,
+                            12 => Dur::DottedHalf,
+                            16 => Dur::Whole,
+                            _ => unreachable!(),
+                        };
+                        music
+                            .push(rest(duration_enum))
+                            .map_err(|_| ScribeError::VecFull)?;
+                        beat_pos = (beat_pos + duration) % 4;
+                        continue;
                     }
 
                     match length_in_current_beat {

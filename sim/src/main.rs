@@ -242,12 +242,11 @@ fn main() -> Result<(), core::convert::Infallible> {
                     keycode,
                     keymod: _,
                     repeat,
-                } => match (keycode, repeat) {
-                    (Keycode::Space, false) => {
+                } => {
+                    if let (Keycode::Space, false) = (keycode, repeat) {
                         example_idx = (example_idx + 1) % examples.len();
                     }
-                    _ => (),
-                },
+                }
                 SimulatorEvent::Quit => break 'main,
                 _ => (),
             }

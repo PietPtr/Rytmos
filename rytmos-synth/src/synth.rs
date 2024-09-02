@@ -35,10 +35,10 @@ impl Iterator for SineSynth {
         let table_size = SINE_WAVE.len() as f32;
 
         let (sign, flip_index) = match self.phase {
-            p if p >= 0.00 && p < 0.25 => (1, false),
-            p if p >= 0.25 && p < 0.50 => (1, true),
-            p if p >= 0.50 && p < 0.75 => (-1, false),
-            p if p >= 0.75 && p < 1.00 => (-1, true),
+            p if (0.00..0.25).contains(&p) => (1, false),
+            p if (0.25..0.50).contains(&p) => (1, true),
+            p if (0.50..0.75).contains(&p) => (-1, false),
+            p if (0.75..1.00).contains(&p) => (-1, true),
             _ => panic!("Impossible phase"),
         };
 
