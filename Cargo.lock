@@ -1685,6 +1685,10 @@ dependencies = [
  "pio-proc",
  "rp-pico",
  "rp2040-boot2",
+ "rytmos-engrave",
+ "rytmos-scribe",
+ "rytmos-synth",
+ "rytmos-ui",
 ]
 
 [[package]]
@@ -1706,6 +1710,7 @@ dependencies = [
  "libm",
  "log",
  "plotters",
+ "rytmos-engrave",
 ]
 
 [[package]]

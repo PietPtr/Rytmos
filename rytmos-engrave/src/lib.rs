@@ -1,4 +1,5 @@
 #![no_std]
+pub mod macros;
 pub mod staff;
 pub mod symbols;
 

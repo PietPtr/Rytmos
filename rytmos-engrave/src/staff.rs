@@ -958,6 +958,7 @@ pub enum Accidental {
     DoubleFlat,
 }
 
+// TODO: move to a rytmos-common crate?
 #[derive(Clone, Copy, Debug)]
 pub enum Note {
     A(Accidental, i32),
@@ -991,6 +992,52 @@ impl Note {
         } else {
             StemDirection::Down
         }
+    }
+
+    pub fn map_octave(&mut self, f: impl Fn(i32) -> i32) -> Self {
+        match self {
+            Note::A(acc, octave) => Note::A(*acc, f(*octave)),
+            Note::B(acc, octave) => Note::B(*acc, f(*octave)),
+            Note::C(acc, octave) => Note::C(*acc, f(*octave)),
+            Note::D(acc, octave) => Note::D(*acc, f(*octave)),
+            Note::E(acc, octave) => Note::E(*acc, f(*octave)),
+            Note::F(acc, octave) => Note::F(*acc, f(*octave)),
+            Note::G(acc, octave) => Note::G(*acc, f(*octave)),
+        }
+    }
+
+    pub fn frequency(&self) -> f32 {
+        let a4_frequency = 440.0;
+        let semitone_ratio = 2f32.powf(1.0 / 12.0);
+
+        let (base_note_semitones, octave) = match self {
+            Note::A(_, octave) => (0, *octave),
+            Note::B(_, octave) => (2, *octave),
+            Note::C(_, octave) => (-9, *octave),
+            Note::D(_, octave) => (-7, *octave),
+            Note::E(_, octave) => (-5, *octave),
+            Note::F(_, octave) => (-4, *octave),
+            Note::G(_, octave) => (-2, *octave),
+        };
+
+        let accidental_offset = match self {
+            Note::A(acc, _)
+            | Note::B(acc, _)
+            | Note::C(acc, _)
+            | Note::D(acc, _)
+            | Note::E(acc, _)
+            | Note::F(acc, _)
+            | Note::G(acc, _) => match acc {
+                Accidental::DoubleFlat => -2,
+                Accidental::Flat => -1,
+                Accidental::Natural => 0,
+                Accidental::Sharp => 1,
+                Accidental::DoubleSharp => 2,
+            },
+        };
+
+        let total_semitones = base_note_semitones + accidental_offset + (octave - 4) * 12;
+        a4_frequency * semitone_ratio.powf(total_semitones as f32)
     }
 }
 

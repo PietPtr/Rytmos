@@ -151,8 +151,7 @@ fn main() -> ! {
     let i2s_send_data_pin = pins.gpio9.into_function::<FunctionPio0>();
     let i2s_send_sclk_pin = pins.gpio10.into_function::<FunctionPio0>();
     let i2s_send_lrclk_pin = pins.gpio11.into_function::<FunctionPio0>();
-    let mut pdm_pio_jump_pin = pins.gpio14.into_push_pull_output();
-    pdm_pio_jump_pin.set_high().unwrap();
+
     let pio_i2s_mclk_output = pio_file!("src/i2s.pio", select_program("mclk_output")).program;
     let pio_i2s_send_master = pio_file!("src/i2s.pio", select_program("i2s_send_master")).program;
 
@@ -193,8 +192,8 @@ fn main() -> ! {
 
     let mut t: f64 = 0.;
 
-    delay.delay_ms(1000);
-    pdm_pio_jump_pin.set_low().unwrap();
+    delay.delay_ms(100);
+
     loop {
         if i2s_tx_transfer.is_done() {
             let (next_tx_buf, next_tx_transfer) = i2s_tx_transfer.wait();
