@@ -1,13 +1,17 @@
 use std::sync::Once;
 
 use plotters::prelude::*;
+use rand::Rng;
 use rytmos_engrave::*;
-use rytmos_synth::synth::{
-    lpf::LowPassFilter,
-    overtone::{OvertoneSynth, OvertoneSynthSettings},
-    sine::{SineSynth, SineSynthSettings},
-    vibrato::{VibratoSynth, VibratoSynthSettings},
-    Synth, SAMPLE_RATE,
+use rytmos_synth::{
+    commands::Command,
+    synth::{
+        lpf::LowPassFilter,
+        overtone::{OvertoneSynth, OvertoneSynthSettings},
+        sine::{SineSynth, SineSynthSettings},
+        vibrato::{VibratoSynth, VibratoSynthSettings},
+        Synth, SAMPLE_RATE,
+    },
 };
 
 static INIT: Once = Once::new();
@@ -69,13 +73,15 @@ fn test_vibrato_synth() {
 fn test_lpf() {
     init_logger();
 
+    // Run a very distorted sine synth
     let mut synth = SineSynth::new(SineSynthSettings {
         attack_gain: 5.0,
         initial_phase: 0.,
-        decay_per_second: 0.9,
+        decay_per_second: 0.2,
     });
 
-    let mut lpf = LowPassFilter::new(500.);
+    // But filter it aggressively
+    let mut lpf = LowPassFilter::new(250.);
 
     synth.play(a!(0), 1.0);
 
@@ -172,6 +178,24 @@ fn plot_samples(samples: &[i16]) -> Result<(), Box<dyn std::error::Error>> {
         .draw()?;
 
     Ok(())
+}
+
+#[test]
+fn test_command_serdes() {
+    let mut rng = rand::thread_rng();
+
+    for _ in 0..1000000 {
+        let mut value: u32 = rng.gen();
+        let command_id = rng.gen_range(0..8) & 0b111111;
+
+        value &= 0b00000011_11111111_11111111_11111111;
+        value |= command_id << 26;
+
+        if let Some(cmd) = Command::deserialize(value) {
+            let serialized = cmd.serialize();
+            assert_eq!(value, serialized);
+        }
+    }
 }
 
 fn export_to_wav(samples: Vec<i16>, file_path: &str) {

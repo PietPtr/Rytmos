@@ -5,7 +5,6 @@ edition = "2021"
 description = "Generates Rytmos sheet music structs based on user input datastructures"
 
 [dependencies]
-test-case = "3.3.1"
 rytmos-engrave = { path = "../rytmos-engrave" }
 embedded-graphics = "0.8.1"
 heapless = "0.8.0"

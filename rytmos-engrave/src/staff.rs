@@ -211,7 +211,7 @@ impl Glyphs {
                 .map_err(|_| EngraveError::NotEnoughSpaceForSymbols)?;
         }
 
-        glyphs.sort_by_key(|(idx, _)| *idx);
+        glyphs.sort_unstable_by_key(|(idx, _)| *idx);
 
         let mut glyphs: Vec<GlyphDefinition, 16> =
             glyphs.into_iter().flat_map(|(_, v)| v).collect();
@@ -1008,7 +1008,7 @@ impl Note {
 
     pub fn frequency(&self) -> f32 {
         let a4_frequency = 440.0;
-        let semitone_ratio = 2f32.powf(1.0 / 12.0);
+        let semitone_ratio = libm::powf(2., 1. / 12.);
 
         let (base_note_semitones, octave) = match self {
             Note::A(_, octave) => (0, *octave),
@@ -1037,7 +1037,7 @@ impl Note {
         };
 
         let total_semitones = base_note_semitones + accidental_offset + (octave - 4) * 12;
-        a4_frequency * semitone_ratio.powf(total_semitones as f32)
+        a4_frequency * libm::powf(semitone_ratio, total_semitones as f32)
     }
 }
 

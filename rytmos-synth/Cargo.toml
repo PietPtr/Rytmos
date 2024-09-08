@@ -15,3 +15,4 @@ rytmos-engrave = { path = "../rytmos-engrave" }
 env_logger = "0.11.3"
 hound = "3.5.1"
 plotters = "0.3.6"
+rand = "0.8.5"
