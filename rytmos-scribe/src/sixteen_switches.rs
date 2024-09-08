@@ -43,6 +43,10 @@ impl MeasureState {
         Self { states }
     }
 
+    pub fn set_all(&mut self, states: [SwitchState; 16]) {
+        self.states = states;
+    }
+
     pub fn set(&mut self, idx: usize, state: SwitchState) -> Result<(), ScribeError> {
         if idx > 15 {
             return Err(ScribeError::InvalidSixteenthIndex(idx));

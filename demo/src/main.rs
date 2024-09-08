@@ -14,7 +14,10 @@ use env_logger::{Builder, Env};
 use log::LevelFilter;
 use rytmos_engrave::staff::{Clef, Staff, StaffElement};
 use rytmos_scribe::sixteen_switches::{MeasureState, PlayDefinition, SwitchState};
-use rytmos_ui::play_analysis::PlayAnalysis;
+use rytmos_ui::{
+    interface::{IOState, Interface},
+    play_analysis::PlayAnalysis,
+};
 
 fn main() -> Result<(), core::convert::Infallible> {
     Builder::from_env(Env::default().default_filter_or(LevelFilter::Trace.to_string())).init();
@@ -29,33 +32,23 @@ fn main() -> Result<(), core::convert::Infallible> {
         .build();
     let mut window = Window::new("Rytmos", &output_settings);
 
-    let staff = Staff::new(display_size.width, Point::new(0, 0));
-
-    let mut analysis = PlayAnalysis::new(PlayDefinition::default());
-
-    let mut states = MeasureState::default();
-
-    let mut now = Instant::now();
+    let mut states = [SwitchState::Noop; 16];
     let mut ringing = false;
 
+    let mut interface = Interface::new();
+
+    let mut now = Instant::now();
+
     'main: loop {
-        Rectangle::new(Point::zero(), display_size)
-            .into_styled(PrimitiveStyle::with_fill(BinaryColor::Off))
-            .draw(&mut display)?;
+        let io_state = IOState {
+            toggle_switches: states,
+            fretting_buttons: [false; 4],
+            plucking_buttons: [false; 2],
+            menu_buttons: [false; 4],
+        };
 
-        let play_def = PlayDefinition::try_from(states).unwrap();
-        analysis.set_rhythm(play_def.clone());
-        analysis.step(ringing);
-        let music = play_def.to_music().unwrap();
-
-        staff.draw(
-            &mut display,
-            &[StaffElement::Clef(Clef::Bass), StaffElement::Music(&music)],
-        )?;
-
-        analysis.draw(&mut display, Point { x: 0, y: 50 })?;
-
-        states.draw(&mut display, Point { x: 0, y: 0 })?;
+        interface.draw(&mut display)?;
+        interface.update_io_state(io_state);
 
         window.update(&display);
 
@@ -67,19 +60,12 @@ fn main() -> Result<(), core::convert::Infallible> {
                     repeat: false,
                 } => {
                     mod_state(&mut states, keycode, keymod);
-                    if keycode == Keycode::Space {
-                        ringing = true;
-                    }
                 }
                 SimulatorEvent::KeyUp {
                     keycode,
                     keymod: _,
                     repeat: false,
-                } => {
-                    if keycode == Keycode::Space {
-                        ringing = false;
-                    }
-                }
+                } => {}
                 SimulatorEvent::Quit => break 'main,
                 _ => (),
             }
@@ -127,11 +113,11 @@ fn find_keycode_position(
 }
 
 fn mod_state(
-    states: &mut MeasureState,
+    states: &mut [SwitchState; 16],
     keycode: Keycode,
     keymod: embedded_graphics_simulator::sdl2::Mod,
 ) {
     if let Some((sixteenth, state)) = find_keycode_position(keymod, keycode) {
-        states.set(sixteenth, state).unwrap();
+        states[sixteenth] = state;
     }
 }

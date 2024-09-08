@@ -266,7 +266,7 @@ fn main() -> ! {
 
     let mut i = 0;
     loop {
-        delay.delay_ms(500);
+        delay.delay_ms(800);
 
         sio.fifo.write(commands[i].serialize());
 
