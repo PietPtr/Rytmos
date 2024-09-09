@@ -116,11 +116,11 @@ impl StringState {
 /// Defines when a string is ringing and for how long. Converted from MeasureState,
 /// and converted into Rytmos notation
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
-pub struct PlayDefinition {
+pub struct RhythmDefinition {
     pub sixteenths: Vec<StringState, 16>,
 }
 
-impl PlayDefinition {
+impl RhythmDefinition {
     pub fn new(sixteenths: Vec<StringState, 16>) -> Result<Self, ScribeError> {
         let mut sum = 0;
         for state in sixteenths.iter() {
@@ -134,10 +134,17 @@ impl PlayDefinition {
         Ok(Self { sixteenths })
     }
 
-    /// Turns a play definition rhythm into Rytmos music, using C as note.
+    /// Turns a play definition rhythm into Rytmos music, using the provided notes (or C as a default if they run out)
     /// Uses the fact that a playdefinition is always exactly 1 measure (checked in new)
-    pub fn to_music(&self) -> Result<Vec<Music, 16>, ScribeError> {
-        let note = |dur| Music::Note(Note::C(Accidental::Natural, 3), dur);
+    pub fn to_music(&self, notes: &Vec<Note, 16>) -> Result<Vec<Music, 16>, ScribeError> {
+        let mut note_index = 0;
+        let mut note = |dur| match notes.get(note_index) {
+            Some(&note) => {
+                note_index += 1;
+                Music::Note(note, dur)
+            }
+            None => Music::Note(Note::C(Accidental::Natural, 3), dur),
+        };
         let rest = Music::Rest;
 
         let mut music = Vec::new();
@@ -308,7 +315,7 @@ impl PlayDefinition {
         Ok(music)
     }
 }
-impl TryFrom<MeasureState> for PlayDefinition {
+impl TryFrom<MeasureState> for RhythmDefinition {
     type Error = ScribeError;
     fn try_from(measure: MeasureState) -> Result<Self, Self::Error> {
         let mut play = Vec::new();
@@ -338,6 +345,6 @@ impl TryFrom<MeasureState> for PlayDefinition {
 
         // Unwrap is safe and on each loop we either increment or add a new element of size 1 so
         // this new doesn't throw errors.
-        PlayDefinition::new(play)
+        RhythmDefinition::new(play)
     }
 }

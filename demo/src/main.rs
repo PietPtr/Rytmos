@@ -13,7 +13,7 @@ use embedded_graphics_simulator::{
 use env_logger::{Builder, Env};
 use log::LevelFilter;
 use rytmos_engrave::staff::{Clef, Staff, StaffElement};
-use rytmos_scribe::sixteen_switches::{MeasureState, PlayDefinition, SwitchState};
+use rytmos_scribe::sixteen_switches::{MeasureState, RhythmDefinition, SwitchState};
 use rytmos_ui::{
     interface::{IOState, Interface},
     play_analysis::PlayAnalysis,

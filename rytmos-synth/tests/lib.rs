@@ -170,12 +170,9 @@ fn plot_samples(samples: &[i16]) -> Result<(), Box<dyn std::error::Error>> {
             &BLUE,
         ))?
         .label("Samples")
-        .legend(|(x, y)| PathElement::new([(x, y), (x + 20, y)], &BLUE));
+        .legend(|(x, y)| PathElement::new([(x, y), (x + 20, y)], BLUE));
 
-    chart
-        .configure_series_labels()
-        .border_style(&BLACK)
-        .draw()?;
+    chart.configure_series_labels().border_style(BLACK).draw()?;
 
     Ok(())
 }

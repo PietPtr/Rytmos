@@ -6,7 +6,7 @@ use embedded_graphics::{
 use rytmos_engrave::symbols::{
     BEAT_A, BEAT_AND, BEAT_E, BEAT_FOUR, BEAT_ONE, BEAT_THREE, BEAT_TWO,
 };
-use rytmos_scribe::sixteen_switches::{PlayDefinition, StringState};
+use rytmos_scribe::sixteen_switches::{RhythmDefinition, StringState};
 
 // We track playing at a resolution of 128th notes
 const PLAYED_BUFFER_SIZE: usize = 128;
@@ -14,16 +14,16 @@ const PLAYED_BUFFER_SIZE: usize = 128;
 /// Shows the beats and subdivisions, a line with how the current rhythm is defined, and what the user just played.
 /// Always draws at 128 pixels width.
 pub struct PlayAnalysis {
-    current_rhythm: PlayDefinition,
+    current_rhythm: RhythmDefinition,
     correct_rhythm: [bool; PLAYED_BUFFER_SIZE],
     played_buffer: [bool; PLAYED_BUFFER_SIZE],
     play_ptr: usize,
 }
 
 impl PlayAnalysis {
-    pub fn new(current_rhythm: PlayDefinition) -> Self {
+    pub fn new(current_rhythm: RhythmDefinition) -> Self {
         let mut s = Self {
-            current_rhythm: PlayDefinition::default(),
+            current_rhythm: RhythmDefinition::default(),
             correct_rhythm: [false; PLAYED_BUFFER_SIZE],
             played_buffer: [false; PLAYED_BUFFER_SIZE],
             play_ptr: 0,
@@ -44,7 +44,7 @@ impl PlayAnalysis {
         libm::roundf((60_000.0 / bpm as f32) / 32.0) as u32
     }
 
-    pub fn set_rhythm(&mut self, rhythm: PlayDefinition) {
+    pub fn set_rhythm(&mut self, rhythm: RhythmDefinition) {
         self.current_rhythm = rhythm;
 
         let mut instant: usize = 0;

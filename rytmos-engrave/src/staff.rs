@@ -935,6 +935,7 @@ pub enum Duration {
 }
 
 impl Duration {
+    /// Returns the value in beats of the duration
     pub fn value(self) -> f64 {
         match self {
             Duration::Whole => 4.0,
@@ -949,7 +950,7 @@ impl Duration {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Accidental {
     Natural,
     Sharp,
@@ -959,7 +960,7 @@ pub enum Accidental {
 }
 
 // TODO: move to a rytmos-common crate?
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Note {
     A(Accidental, i32),
     B(Accidental, i32),

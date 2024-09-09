@@ -1,7 +1,7 @@
 use rytmos_engrave::staff::{Accidental, Note};
 
 /// Commands for synths that can be serialized in a u32 so the fit in a Pico's FIFO.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Command {
     /// Note and velocity (encoded as a (velocity / 256) * scale)
     Play(Note, u8, u8),
@@ -33,7 +33,7 @@ impl Command {
 
                 let octave_bits = (octave & 0b1111) as u32;
 
-                ((velocity as u32) << 0)
+                (velocity as u32)
                     | ((scale as u32) << 8)
                     | (note_bits << 16)
                     | (acc_bits << 19)
@@ -48,11 +48,11 @@ impl Command {
 
         match command_id {
             0 => {
-                let velocity = (value & 0xFF) as u32;
-                let scale = ((value >> 8) & 0xFF) as u32;
-                let note_bits = ((value >> 16) & 0x7) as u32;
-                let acc_bits = ((value >> 19) & 0x7) as u32;
-                let octave_bits = ((value >> 22) & 0x3FF) as u32;
+                let velocity = value & 0xFF;
+                let scale = (value >> 8) & 0xFF;
+                let note_bits = (value >> 16) & 0x7;
+                let acc_bits = (value >> 19) & 0x7;
+                let octave_bits = (value >> 22) & 0x3FF;
 
                 let octave = octave_bits as i32;
 
