@@ -7,6 +7,7 @@ use rytmos_synth::{
     commands::Command,
     synth::{
         lpf::LowPassFilter,
+        metronome::{Metronome, MetronomeSettings},
         overtone::{OvertoneSynth, OvertoneSynthSettings},
         sine::{SineSynth, SineSynthSettings},
         vibrato::{VibratoSynth, VibratoSynthSettings},
@@ -88,6 +89,23 @@ fn test_lpf() {
     let samples: Vec<i16> = (0..44100).map(|_| lpf.next(synth.next())).collect();
 
     plot_samples(&samples[..22000]).unwrap();
+    export_to_wav(samples, "signal.wav");
+}
+
+#[test]
+fn test_metronome() {
+    init_logger();
+
+    let mut synth = Metronome::new(MetronomeSettings {
+        bpm: 120,
+        accent_one: true,
+    });
+
+    synth.play(a!(0), 1.0);
+
+    let samples: Vec<i16> = (0..44100).map(|_| synth.next()).collect();
+
+    plot_samples(&samples[..44000]).unwrap();
     export_to_wav(samples, "signal.wav");
 }
 
