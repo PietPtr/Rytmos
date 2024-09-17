@@ -117,25 +117,19 @@ fn synth_core(sys_freq: u32) -> ! {
         decay_per_second: 0.4,
     });
 
-    let mut t: f64 = 0.;
     loop {
         sio.fifo
             .read()
-            .and_then(|value| Command::deserialize(value))
-            .map(|command| synth.run_command(command));
+            .and_then(Command::deserialize)
+            .inspect(|&command| synth.run_command(command));
 
         if i2s_tx_transfer.is_done() {
             let (next_tx_buf, next_tx_transfer) = i2s_tx_transfer.wait();
 
-            let sample = 2.0 * libm::round((t / 100.2272727) % 1.0 - 0.5) - 1.0;
+            let sample = synth.next(); // TODO: i16 vs u32??
 
-            for (i, e) in next_tx_buf.iter_mut().enumerate() {
-                if i % 2 == 0 {
-                    t += 1.;
-                    *e = sample as u32;
-                } else {
-                    *e = sample as u32;
-                }
+            for e in next_tx_buf.iter_mut() {
+                *e = sample as u32;
             }
 
             i2s_tx_transfer = next_tx_transfer.read_next(next_tx_buf);
