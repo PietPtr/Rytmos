@@ -1,5 +1,7 @@
 use rytmos_engrave::{a, staff::Note};
 
+use crate::commands::Command;
+
 use super::{
     sine::{SineSynth, SineSynthSettings},
     Synth,
@@ -60,5 +62,9 @@ impl Synth for VibratoSynth {
         }
 
         self.sine_synth.next()
+    }
+
+    fn run_command(&mut self, command: Command) {
+        super::run_play_command(self, command);
     }
 }

@@ -1,5 +1,7 @@
 use rytmos_engrave::staff::Note;
 
+use crate::commands::Command;
+
 use super::Synth;
 
 /// Synthesizer that overlays a single synth N times in its integer overtone series.
@@ -33,5 +35,9 @@ impl<S: Synth, const N: usize> Synth for OvertoneSynth<S, N> {
         self.synths
             .iter_mut()
             .fold(0, |acc, synth| acc.saturating_add(synth.next()))
+    }
+
+    fn run_command(&mut self, command: Command) {
+        super::run_play_command(self, command);
     }
 }

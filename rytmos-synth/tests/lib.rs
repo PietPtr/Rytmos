@@ -208,7 +208,11 @@ fn test_command_serdes() {
 
         if let Some(cmd) = Command::deserialize(value) {
             let serialized = cmd.serialize();
-            assert_eq!(value, serialized);
+            assert_eq!(
+                value, serialized,
+                "Failed serdes test: {:#?} => {} =/= {}",
+                cmd, value, serialized
+            );
         }
     }
 }

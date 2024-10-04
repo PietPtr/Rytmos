@@ -18,13 +18,12 @@ pub trait Synth {
     fn configure(&mut self, settings: Self::Settings);
     fn play(&mut self, note: Note, velocity: f32);
     fn next(&mut self) -> i16;
+    fn run_command(&mut self, command: Command);
+}
 
-    fn run_command(&mut self, command: Command) {
-        match command {
-            Command::Play(note, velocity, scale) => {
-                let velocity: f32 = (velocity as f32 / 256.) * scale as f32;
-                self.play(note, velocity);
-            }
-        }
+fn run_play_command<S>(synth: &mut dyn Synth<Settings = S>, command: Command) {
+    if let Command::Play(note, velocity, scale) = command {
+        let velocity: f32 = (velocity as f32 / 256.) * scale as f32;
+        synth.play(note, velocity);
     }
 }

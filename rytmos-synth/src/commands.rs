@@ -5,7 +5,7 @@ use rytmos_engrave::staff::{Accidental, Note};
 pub enum Command {
     /// Note and velocity (encoded as a (velocity / 256) * scale)
     Play(Note, u8, u8),
-    // TODO: synth reconfiguration commands
+    SetAttack(u8, u8), // TODO: make something more ergonomic for this u8, u8 fixed point type
 }
 
 impl Command {
@@ -40,6 +40,11 @@ impl Command {
                     | (octave_bits << 22)
                     | (command_id << 26)
             }
+            Command::SetAttack(attack, scale) => {
+                let command_id = 0b00001;
+                (attack as u32) | ((scale as u32) << 8) | (command_id << 26)
+            }
+            _ => unimplemented!(),
         }
     }
 
@@ -77,6 +82,11 @@ impl Command {
                 };
 
                 Some(Self::Play(note, velocity as u8, scale as u8))
+            }
+            1 => {
+                let attack = value as u8;
+                let scale = (value >> 8) as u8;
+                Some(Self::SetAttack(attack, scale))
             }
             _ => None,
         }

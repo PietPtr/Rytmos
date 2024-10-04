@@ -1,6 +1,6 @@
 use rytmos_engrave::staff::Note;
 
-use crate::synth::SAMPLE_RATE;
+use crate::{commands::Command, synth::SAMPLE_RATE};
 
 use super::{
     samples::{strong::STRONG_WAV, weak::WEAK_WAV},
@@ -58,5 +58,9 @@ impl Synth for Metronome {
         } else {
             *WEAK_WAV.get(self.sample).unwrap_or(&0)
         }
+    }
+
+    fn run_command(&mut self, command: Command) {
+        super::run_play_command(self, command);
     }
 }

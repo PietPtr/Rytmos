@@ -1,6 +1,6 @@
-use crate::wavetables::SINE_WAVE;
+use crate::{commands::Command, wavetables::SINE_WAVE};
 
-use super::{Synth, SAMPLE_RATE};
+use super::{run_play_command, Synth, SAMPLE_RATE};
 
 pub struct SineSynth {
     settings: SineSynthSettings,
@@ -94,6 +94,17 @@ impl Synth for SineSynth {
         self.gain *= self.decay();
 
         sample
+    }
+
+    fn run_command(&mut self, command: Command) {
+        run_play_command(self, command);
+
+        match command {
+            Command::SetAttack(attack, scale) => {
+                self.settings.attack_gain = (attack as u32 * 256) as f32 * scale as f32
+            }
+            _ => (),
+        }
     }
 }
 
