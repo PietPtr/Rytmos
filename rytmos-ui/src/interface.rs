@@ -40,20 +40,7 @@ pub struct PlayingButtons {
 /// MVP:
 /// - master synth containing an overtone synth with some constant settings
 /// - connect fretting and plucking buttons to master synth
-/// - menu button functions:
-///     - play / pause, shows play or pause icon
-///     - cycle through modes, shows M(mode number):
-///         1) always play pattern
-///         2) play pattern every other bar
-///         3) never play pattern
-///     - metronome enable/disable, shows (moving) metronome icon
-///     - fn
-///         FRET1: inc bpm
-///         FRET2: dec bpm
-///         FRET3: inc metronome volume
-///         FRET4: dec metronome volume
-///         PLUCK_LEFT: -
-///         PLUCK_RIGHT: -
+/// - bare menu at the bottom of the screen
 pub struct Interface {
     // Gadgets, drawables
     staff: Staff,
@@ -135,8 +122,10 @@ impl Interface {
     }
 
     /// Gets the next command for the synth, given the time t in 128th notes.
+    /// This function is very timing sensitive and should be called in regular intervals,
+    /// using timer functionality or the rhythm will not be correct.
     pub fn next_synth_command(&mut self, t: u64) -> Vec<Command, 4> {
-        self.synth_controller.command_for_time(t)
+        self.synth_controller.next_command()
     }
 
     // TODO: will be set by a menu, should be retrieved by main to call update correctly

@@ -16,16 +16,27 @@ pub struct SynthControllerSettingsUpdate {
     pub metronome: Option<Option<u8>>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SynthControllerState {
+    Playing,
+    Stopped,
+}
+
 pub struct SynthController {
     settings: SynthControllerSettings,
     music: Vec<Music, 16>,
+    time: u64,
+    state: SynthControllerState,
 }
 
+/// Given a certain music definition, translates that music to commands for a synth.
 impl SynthController {
     pub fn new(settings: SynthControllerSettings) -> Self {
         Self {
             settings,
             music: Vec::new(),
+            time: 0,
+            state: SynthControllerState::Stopped,
         }
     }
 
@@ -47,6 +58,29 @@ impl SynthController {
         self.settings = new_settings;
 
         Vec::new()
+    }
+
+    pub fn play_or_stop_toggle(&mut self) {
+        self.state = match self.state {
+            SynthControllerState::Playing => SynthControllerState::Stopped,
+            SynthControllerState::Stopped => SynthControllerState::Playing,
+        };
+
+        if self.state == SynthControllerState::Stopped {
+            self.time = 0;
+        }
+    }
+
+    pub fn state(&self) -> SynthControllerState {
+        self.state
+    }
+
+    pub fn next_command(&mut self) -> Vec<Command, 4> {
+        let commands = self.command_for_time(self.time);
+
+        self.time += 1;
+
+        commands
     }
 
     pub fn command_for_time(&self, t: u64) -> Vec<Command, 4> {
