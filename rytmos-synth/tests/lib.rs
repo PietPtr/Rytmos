@@ -7,7 +7,7 @@ use rytmos_synth::{
     commands::Command,
     synth::{
         lpf::LowPassFilter,
-        metronome::{Metronome, MetronomeSettings},
+        metronome::{MetronomeSettings, MetronomeSynth},
         overtone::{OvertoneSynth, OvertoneSynthSettings},
         sine::{SineSynth, SineSynthSettings},
         vibrato::{VibratoSynth, VibratoSynthSettings},
@@ -96,7 +96,7 @@ fn test_lpf() {
 fn test_metronome() {
     init_logger();
 
-    let mut synth = Metronome::new(MetronomeSettings {
+    let mut synth = MetronomeSynth::new(MetronomeSettings {
         bpm: 120,
         accent_one: true,
     });

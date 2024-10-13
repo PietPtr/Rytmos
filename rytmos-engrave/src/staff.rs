@@ -1040,6 +1040,71 @@ impl Note {
         let total_semitones = base_note_semitones + accidental_offset + (octave - 4) * 12;
         a4_frequency * libm::powf(semitone_ratio, total_semitones as f32)
     }
+
+    pub fn from_u8_flat(code: u8) -> Self {
+        let (note, octave) = Note::midi_to_note_octave(code);
+        match note {
+            0 => Note::C(Accidental::Natural, octave),
+            1 => Note::D(Accidental::Flat, octave),
+            2 => Note::D(Accidental::Natural, octave),
+            3 => Note::E(Accidental::Flat, octave),
+            4 => Note::E(Accidental::Natural, octave),
+            5 => Note::F(Accidental::Natural, octave),
+            6 => Note::G(Accidental::Flat, octave),
+            7 => Note::G(Accidental::Natural, octave),
+            8 => Note::A(Accidental::Flat, octave),
+            9 => Note::A(Accidental::Natural, octave),
+            10 => Note::B(Accidental::Flat, octave),
+            11 => Note::B(Accidental::Natural, octave),
+            _ => panic!("Invalid MIDI code"), // Should never reach here
+        }
+    }
+
+    pub fn from_u8_sharp(code: u8) -> Self {
+        let (note, octave) = Note::midi_to_note_octave(code);
+        match note {
+            0 => Note::C(Accidental::Natural, octave),
+            1 => Note::C(Accidental::Sharp, octave),
+            2 => Note::D(Accidental::Natural, octave),
+            3 => Note::D(Accidental::Sharp, octave),
+            4 => Note::E(Accidental::Natural, octave),
+            5 => Note::F(Accidental::Natural, octave),
+            6 => Note::F(Accidental::Sharp, octave),
+            7 => Note::G(Accidental::Natural, octave),
+            8 => Note::G(Accidental::Sharp, octave),
+            9 => Note::A(Accidental::Natural, octave),
+            10 => Note::A(Accidental::Sharp, octave),
+            11 => Note::B(Accidental::Natural, octave),
+            _ => panic!("Invalid MIDI code"), // Should never reach here
+        }
+    }
+
+    fn midi_to_note_octave(code: u8) -> (u8, i32) {
+        let note = code % 12;
+        let octave = (code / 12) as i32 - 1; // MIDI octave starts at -1
+        (note, octave)
+    }
+
+    pub fn to_code(self) -> u8 {
+        let (note_value, octave, accidental) = match self {
+            Note::A(accidental, octave) => (9, octave, accidental),
+            Note::B(accidental, octave) => (11, octave, accidental),
+            Note::C(accidental, octave) => (0, octave, accidental),
+            Note::D(accidental, octave) => (2, octave, accidental),
+            Note::E(accidental, octave) => (4, octave, accidental),
+            Note::F(accidental, octave) => (5, octave, accidental),
+            Note::G(accidental, octave) => (7, octave, accidental),
+        };
+
+        let note_value = match (note_value, accidental) {
+            (base, Accidental::Natural) => base,
+            (base, Accidental::Flat) => base - 1,
+            (base, Accidental::Sharp) => base + 1,
+            _ => panic!("Don't support double sharp/flat"),
+        };
+
+        (octave + 1) as u8 * 12 + note_value
+    }
 }
 
 #[derive(Clone, Copy)]

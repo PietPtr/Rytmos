@@ -12,14 +12,14 @@ pub struct MetronomeSettings {
     pub accent_one: bool,
 }
 
-pub struct Metronome {
+pub struct MetronomeSynth {
     pub settings: MetronomeSettings,
     beat_count: usize,
     sample: usize,
     velocity: f32,
 }
 
-impl Metronome {
+impl MetronomeSynth {
     pub fn new(settings: MetronomeSettings) -> Self {
         Self {
             settings,
@@ -30,7 +30,7 @@ impl Metronome {
     }
 }
 
-impl Synth for Metronome {
+impl Synth for MetronomeSynth {
     type Settings = MetronomeSettings;
 
     fn configure(&mut self, settings: Self::Settings) {
@@ -53,11 +53,13 @@ impl Synth for Metronome {
             self.beat_count = (1 + self.beat_count) % 4;
         }
 
-        if self.beat_count == 0 && self.settings.accent_one {
+        let sample = if self.beat_count == 0 && self.settings.accent_one {
             *STRONG_WAV.get(self.sample).unwrap_or(&0)
         } else {
             *WEAK_WAV.get(self.sample).unwrap_or(&0)
-        }
+        };
+
+        (sample as f32 * self.velocity) as i16
     }
 
     fn run_command(&mut self, command: Command) {

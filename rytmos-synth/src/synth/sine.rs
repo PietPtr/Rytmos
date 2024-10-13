@@ -99,6 +99,7 @@ impl Synth for SineSynth {
     fn run_command(&mut self, command: Command) {
         run_play_command(self, command);
 
+        #[allow(clippy::single_match)]
         match command {
             Command::SetAttack(attack, scale) => {
                 self.settings.attack_gain = (attack as u32 * 256) as f32 * scale as f32
@@ -107,5 +108,3 @@ impl Synth for SineSynth {
         }
     }
 }
-
-// TODO: Add metronome synth, given a tempo generates ticks with emphasis on 1.

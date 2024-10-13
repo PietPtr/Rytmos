@@ -1,21 +1,16 @@
 use std::time::Instant;
 
 use defmt_rtt as _;
-use embedded_graphics::{
-    pixelcolor::BinaryColor,
-    prelude::*,
-    primitives::{PrimitiveStyle, Rectangle},
-};
+use embedded_graphics::{pixelcolor::BinaryColor, prelude::*};
 use embedded_graphics_simulator::{
     sdl2::{Keycode, Mod},
     BinaryColorTheme, OutputSettingsBuilder, SimulatorDisplay, SimulatorEvent, Window,
 };
 use env_logger::{Builder, Env};
 use log::LevelFilter;
-use rytmos_engrave::staff::{Clef, Staff, StaffElement};
-use rytmos_scribe::sixteen_switches::{MeasureState, RhythmDefinition, SwitchState};
+use rytmos_scribe::sixteen_switches::SwitchState;
 use rytmos_ui::{
-    interface::{IOState, Interface},
+    interface::{IOState, Interface, PlayingButtons},
     play_analysis::PlayAnalysis,
 };
 
@@ -33,7 +28,10 @@ fn main() -> Result<(), core::convert::Infallible> {
     let mut window = Window::new("Rytmos", &output_settings);
 
     let mut states = [SwitchState::Noop; 16];
-    let mut ringing = false;
+    let mut playing_buttons = PlayingButtons {
+        fretting_buttons: [false; 4],
+        plucking_buttons: [false; 2],
+    };
 
     let mut interface = Interface::new();
 
@@ -42,13 +40,13 @@ fn main() -> Result<(), core::convert::Infallible> {
     'main: loop {
         let io_state = IOState {
             toggle_switches: states,
-            fretting_buttons: [false; 4],
-            plucking_buttons: [false; 2],
+            playing_buttons,
             menu_buttons: [false; 4],
         };
 
         interface.draw(&mut display)?;
-        interface.update_io_state(io_state);
+        let synth_commands = interface.update_io_state(io_state);
+        log::info!("{:?}", synth_commands);
 
         window.update(&display);
 
@@ -59,13 +57,16 @@ fn main() -> Result<(), core::convert::Infallible> {
                     keymod,
                     repeat: false,
                 } => {
-                    mod_state(&mut states, keycode, keymod);
+                    update_toggle_switches_states(&mut states, keycode, keymod);
+                    update_playing_buttons(&mut playing_buttons, keycode, true);
                 }
                 SimulatorEvent::KeyUp {
                     keycode,
                     keymod: _,
                     repeat: false,
-                } => {}
+                } => {
+                    update_playing_buttons(&mut playing_buttons, keycode, false);
+                }
                 SimulatorEvent::Quit => break 'main,
                 _ => (),
             }
@@ -76,6 +77,18 @@ fn main() -> Result<(), core::convert::Infallible> {
     }
 
     Ok(())
+}
+
+fn update_playing_buttons(playing_buttons: &mut PlayingButtons, keycode: Keycode, down: bool) {
+    match keycode {
+        Keycode::Semicolon => playing_buttons.fretting_buttons[0] = down,
+        Keycode::Q => playing_buttons.fretting_buttons[1] = down,
+        Keycode::J => playing_buttons.fretting_buttons[2] = down,
+        Keycode::K => playing_buttons.fretting_buttons[3] = down,
+        Keycode::W => playing_buttons.plucking_buttons[0] = down,
+        Keycode::V => playing_buttons.plucking_buttons[1] = down,
+        _ => (),
+    }
 }
 
 fn find_keycode_position(
@@ -112,7 +125,7 @@ fn find_keycode_position(
     None
 }
 
-fn mod_state(
+fn update_toggle_switches_states(
     states: &mut [SwitchState; 16],
     keycode: Keycode,
     keymod: embedded_graphics_simulator::sdl2::Mod,

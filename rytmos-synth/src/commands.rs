@@ -44,7 +44,6 @@ impl Command {
                 let command_id = 0b00001;
                 (attack as u32) | ((scale as u32) << 8) | (command_id << 26)
             }
-            _ => unimplemented!(),
         }
     }
 
