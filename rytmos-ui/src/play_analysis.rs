@@ -3,10 +3,8 @@ use embedded_graphics::{
     prelude::*,
     primitives::{Line, PrimitiveStyle, Rectangle, StyledDrawable},
 };
-use rytmos_engrave::symbols::{
-    BEAT_A, BEAT_AND, BEAT_E, BEAT_FOUR, BEAT_ONE, BEAT_THREE, BEAT_TWO,
-};
 use rytmos_scribe::sixteen_switches::{RhythmDefinition, StringState};
+use rytmos_symbols::{BEAT_A, BEAT_AND, BEAT_E, BEAT_FOUR, BEAT_ONE, BEAT_THREE, BEAT_TWO};
 
 // We track playing at a resolution of 128th notes
 const PLAYED_BUFFER_SIZE: usize = 128;
@@ -89,7 +87,7 @@ impl PlayAnalysis {
         let off_style = PrimitiveStyle::with_stroke(BinaryColor::Off, 1);
 
         for (sixteenth, &beat) in beats.iter().enumerate() {
-            rytmos_engrave::symbols::draw_symbol(target, position + x(), beat)?;
+            rytmos_symbols::draw_symbol(target, position + x(), beat)?;
             Rectangle::new(
                 position
                     + Point {

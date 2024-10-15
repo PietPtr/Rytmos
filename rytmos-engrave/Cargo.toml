@@ -5,6 +5,7 @@ edition = "2021"
 description = "Music notation renderer for embedded devices"
 
 [dependencies]
+rytmos-symbols = { path = "../rytmos-symbols" }
 embedded-graphics = "0.8.1"
 heapless = "0.8.0"
 log = "0.4.22"

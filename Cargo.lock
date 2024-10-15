@@ -1700,6 +1700,7 @@ dependencies = [
  "heapless 0.8.0",
  "libm",
  "log",
+ "rytmos-symbols",
 ]
 
 [[package]]
@@ -1735,6 +1736,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "rytmos-symbols"
+version = "0.1.0"
+dependencies = [
+ "embedded-graphics",
+]
+
+[[package]]
 name = "rytmos-synth"
 version = "0.1.0"
 dependencies = [
@@ -1760,6 +1768,7 @@ dependencies = [
  "plotters",
  "rytmos-engrave",
  "rytmos-scribe",
+ "rytmos-symbols",
  "rytmos-synth",
 ]
 

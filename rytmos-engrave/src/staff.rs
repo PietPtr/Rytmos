@@ -9,7 +9,7 @@ use embedded_graphics::{
 use heapless::{FnvIndexMap, Vec};
 use log::{debug, error};
 
-use crate::symbols::{
+use rytmos_symbols::{
     BASS_CLEF, DOTTED_EIGHTH_REST, DOTTED_HALF_REST, DOTTED_QUARTER_REST, EIGHTH_REST, EIGHT_FLAG,
     EMPTY_NOTEHEAD, FILLED_NOTEHEAD, HALF_REST, QUARTER_REST, SIXTEENTH_FLAG, SIXTEENTH_REST,
     WHOLE_REST,
@@ -472,18 +472,18 @@ impl Music {
         if symbol.symbol.rest {
             let pos = position + Point::new(x, MusicSymbolDefinitions::REST_OFFSET);
             match symbol.symbol.kind {
-                Duration::Eighth => crate::symbols::draw_symbol(target, pos, EIGHTH_REST)?,
-                Duration::Whole => crate::symbols::draw_symbol(target, pos, WHOLE_REST)?,
-                Duration::Half => crate::symbols::draw_symbol(target, pos, HALF_REST)?,
-                Duration::DottedHalf => crate::symbols::draw_symbol(target, pos, DOTTED_HALF_REST)?,
-                Duration::Quarter => crate::symbols::draw_symbol(target, pos, QUARTER_REST)?,
+                Duration::Eighth => rytmos_symbols::draw_symbol(target, pos, EIGHTH_REST)?,
+                Duration::Whole => rytmos_symbols::draw_symbol(target, pos, WHOLE_REST)?,
+                Duration::Half => rytmos_symbols::draw_symbol(target, pos, HALF_REST)?,
+                Duration::DottedHalf => rytmos_symbols::draw_symbol(target, pos, DOTTED_HALF_REST)?,
+                Duration::Quarter => rytmos_symbols::draw_symbol(target, pos, QUARTER_REST)?,
                 Duration::DottedQuarter => {
-                    crate::symbols::draw_symbol(target, pos, DOTTED_QUARTER_REST)?
+                    rytmos_symbols::draw_symbol(target, pos, DOTTED_QUARTER_REST)?
                 }
                 Duration::DottedEighth => {
-                    crate::symbols::draw_symbol(target, pos, DOTTED_EIGHTH_REST)?
+                    rytmos_symbols::draw_symbol(target, pos, DOTTED_EIGHTH_REST)?
                 }
-                Duration::Sixteenth => crate::symbols::draw_symbol(target, pos, SIXTEENTH_REST)?,
+                Duration::Sixteenth => rytmos_symbols::draw_symbol(target, pos, SIXTEENTH_REST)?,
             };
         } else {
             let position = position + Point::new(x, symbol.symbol.y);
@@ -525,9 +525,9 @@ impl Music {
             // Draw the head
             match symbol.symbol.kind {
                 Duration::Whole | Duration::Half | Duration::DottedHalf => {
-                    crate::symbols::draw_symbol(target, position, EMPTY_NOTEHEAD)?
+                    rytmos_symbols::draw_symbol(target, position, EMPTY_NOTEHEAD)?
                 }
-                _ => crate::symbols::draw_symbol(target, position, FILLED_NOTEHEAD)?,
+                _ => rytmos_symbols::draw_symbol(target, position, FILLED_NOTEHEAD)?,
             };
 
             if symbol.symbol.kind != Duration::Whole {
@@ -610,12 +610,12 @@ impl Music {
 
                 match symbol.symbol.kind {
                     Duration::Eighth => {
-                        crate::symbols::draw_symbol_with_direction(
+                        rytmos_symbols::draw_symbol_with_direction(
                             target, pos, EIGHT_FLAG, flipped,
                         )?;
                     }
                     Duration::DottedEighth => {
-                        crate::symbols::draw_symbol_with_direction(
+                        rytmos_symbols::draw_symbol_with_direction(
                             target,
                             pos,
                             DOTTED_EIGHTH_REST,
@@ -623,7 +623,7 @@ impl Music {
                         )?;
                     }
                     Duration::Sixteenth => {
-                        crate::symbols::draw_symbol_with_direction(
+                        rytmos_symbols::draw_symbol_with_direction(
                             target,
                             pos + Point {
                                 x: 0,
@@ -1137,7 +1137,7 @@ impl Clef {
     {
         match self {
             Clef::Bass => {
-                crate::symbols::draw_symbol(target, position, BASS_CLEF)?;
+                rytmos_symbols::draw_symbol(target, position, BASS_CLEF)?;
                 Ok(13)
             }
             Clef::Treble => Ok(0),

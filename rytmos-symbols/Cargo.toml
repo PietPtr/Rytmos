@@ -1,0 +1,8 @@
+[package]
+name = "rytmos-symbols"
+version = "0.1.0"
+edition = "2021"
+description = "Symbols for Rytmos"
+
+[dependencies]
+embedded-graphics = "0.8.1"

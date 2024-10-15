@@ -1,3 +1,5 @@
+#![no_std]
+
 use embedded_graphics::{
     draw_target::DrawTarget, geometry::Point, pixelcolor::BinaryColor, Drawable, Pixel,
 };
@@ -183,14 +185,32 @@ pub const FILLED_NOTEHEAD: (u32, &[u32]) = (6, &[
     pix!("_BBBB_"),
 ]);
 
+macro_rules! art {
+    ($name:ident, $size:expr, $($line:tt)*) => {
+        #[rustfmt::skip]
+        pub const $name: (u32, &[u32]) = ($size, &[
+            $(pix!(stringify!($line))),*
+        ]);
+    };
+}
+
+// TODO: change all things to this definition
+art!(EMPTY_NOTEHEAD, 6,
+_BBBB_
+__WW__
+BW__WB
+__WW__
+_BBBB_
+);
+
 #[rustfmt::skip]
-pub const EMPTY_NOTEHEAD: (u32, &[u32]) = (6, &[
-    pix!("_BBBB_"),
-    pix!("__WW__"),
-    pix!("BW__WB"),
-    pix!("__WW__"),
-    pix!("_BBBB_"),
-]);
+// pub const EMPTY_NOTEHEAD: (u32, &[u32]) = (6, &[
+//     pix!("_BBBB_"),
+//     pix!("__WW__"),
+//     pix!("BW__WB"),
+//     pix!("__WW__"),
+//     pix!("_BBBB_"),
+// ]);
 
 #[rustfmt::skip]
 pub const BEAT_ONE: (u32, &[u32]) = (3, &[
@@ -247,6 +267,78 @@ pub const BEAT_A: (u32, &[u32]) = (3, &[
     pix!("W_W"),
     pix!("W_W"),
 ]);
+
+art!(STOPPED, 6,
+WWWWWW
+WWWWWW
+WWWWWW
+WWWWWW
+WWWWWW
+WWWWWW
+);
+
+art!(PLAYING, 6,
+WWBBBB
+WWWWBB
+WWWWWW
+WWWWWW
+WWWWBB
+WWBBBB
+);
+
+art!(LETTER_A, 5,
+BWWWWB
+WBBBBW
+WBBBBW
+WWWWWW
+WBBBBW
+WBBBBW
+);
+
+art!(LETTER_B, 5,
+WWWWWB
+WBBBBW
+WWWWWB
+WBBBBW
+WBBBBW
+WWWWWW
+);
+
+art!(LETTER_C, 5,
+BWWWWB
+WBBBBW
+WBBBBB
+WBBBBB
+WBBBBW
+BWWWWB
+);
+
+art!(METRONOME_LEFT, 5,
+WBBBB
+BWBBB
+BWBBB
+BBWBB
+WWWWW
+WWWWW
+);
+
+art!(METRONOME_CENTER, 5,
+BBWBB
+BBWBB
+BBWBB
+BBWBB
+WWWWW
+WWWWW
+);
+
+art!(METRONOME_RIGHT, 5,
+BBBBW
+BBBWB
+BBBWB
+BBWBB
+WWWWW
+WWWWW
+);
 
 pub fn draw_symbol<D>(
     target: &mut D,

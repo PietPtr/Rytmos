@@ -84,6 +84,7 @@ impl SynthController {
     }
 
     pub fn command_for_time(&self, t: u64) -> Vec<Command, 4> {
+        // TODO: play metronome tick?
         if !self.settings.play_pattern {
             return Vec::new();
         }

@@ -1,10 +1,12 @@
 [workspace]
 members = [
+    "rytmos-symbols",
     "rytmos-engrave", 
     "rytmos-scribe",
     "rytmos-synth",
     "rytmos-ui",
+    "rytmos-pico", 
     "sim",
-    "demo", "rytmos-pico", 
+    "demo", 
 ]
 resolver = "2"
