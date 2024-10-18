@@ -1,13 +1,20 @@
+use embedded_graphics::{
+    pixelcolor::BinaryColor,
+    prelude::{DrawTarget, Point},
+};
+use heapless::Vec;
+use rytmos_synth::commands::Command;
+
 use crate::{
     interface::IOState,
-    synth_controller::{SynthController, SynthControllerSettingsUpdate},
+    synth_controller::{SynthController, SynthControllerSettings, SynthControllerSettingsUpdate},
 };
 
 #[derive(Debug, Default)]
 #[repr(u8)]
 enum PlayMode {
-    PlayPattern = 0,
     #[default]
+    PlayPattern = 0,
     PatternEveryOtherBar = 1,
     NeverPlayPattern = 2,
 }
@@ -37,18 +44,18 @@ impl PlayMode {
 ///         FRET4: TODO: dec metronome volume
 ///         PLUCK_LEFT: -
 ///         PLUCK_RIGHT: -
-pub struct BareMenu<'a> {
-    synth_controller: &'a mut SynthController,
+pub struct BareMenu {
+    synth_controller: SynthController,
     last_state: IOState,
     play_mode: PlayMode,
     saved_metronome_tempo: u8,
     metronome_enabled: bool,
 }
 
-impl<'a> BareMenu<'a> {
-    pub fn new(synth_controller: &'a mut SynthController) -> Self {
+impl BareMenu {
+    pub fn new() -> Self {
         Self {
-            synth_controller,
+            synth_controller: SynthController::new(SynthControllerSettings::default()),
             last_state: IOState::default(), // TODO: also do this in playing.rs?
             play_mode: PlayMode::default(),
             saved_metronome_tempo: 80,
@@ -56,16 +63,41 @@ impl<'a> BareMenu<'a> {
         }
     }
 
-    // pub fn draw() // TODO: this
+    pub fn draw<D>(&self, target: &mut D, position: Point) -> Result<(), D::Error>
+    where
+        D: DrawTarget<Color = BinaryColor>,
+    {
+        let playmode_position = position + Point { x: 50, y: 0 };
+
+        match self.play_mode {
+            PlayMode::PlayPattern => {
+                rytmos_symbols::draw_symbol(target, playmode_position, rytmos_symbols::LETTER_A)?;
+            }
+            PlayMode::PatternEveryOtherBar => {
+                rytmos_symbols::draw_symbol(target, playmode_position, rytmos_symbols::LETTER_B)?;
+            }
+            PlayMode::NeverPlayPattern => {
+                rytmos_symbols::draw_symbol(target, playmode_position, rytmos_symbols::LETTER_C)?;
+            }
+        }
+
+        Ok(())
+    }
 
     pub fn update(&mut self, state: IOState) {
         macro_rules! was_menu_button_pressed {
-            ($i:expr) => {
+            ($i:expr) => {{
+                log::info!(
+                    "{} {} {}",
+                    $i,
+                    self.last_state.menu_buttons[$i],
+                    state.menu_buttons[$i]
+                );
                 matches!(
                     (self.last_state.menu_buttons[$i], state.menu_buttons[$i]),
                     (true, false)
                 )
-            };
+            }};
         }
 
         macro_rules! was_fret_pressed {
@@ -84,6 +116,8 @@ impl<'a> BareMenu<'a> {
         let button2 = was_menu_button_pressed!(1);
         let button3 = was_menu_button_pressed!(2);
         let button4 = was_menu_button_pressed!(3);
+
+        log::info!("{} {} {} {}", button1, button2, button3, button4);
 
         let mut metronome_changed = false;
 
@@ -129,5 +163,17 @@ impl<'a> BareMenu<'a> {
                     ..Default::default()
                 });
         }
+
+        self.last_state = state;
+    }
+
+    pub(crate) fn next_command(&mut self) -> Vec<Command, 4> {
+        self.synth_controller.next_command()
+    }
+}
+
+impl Default for BareMenu {
+    fn default() -> Self {
+        Self::new()
     }
 }

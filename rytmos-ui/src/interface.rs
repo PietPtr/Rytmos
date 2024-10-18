@@ -12,9 +12,10 @@ use rytmos_scribe::sixteen_switches::{MeasureState, RhythmDefinition, SwitchStat
 use rytmos_synth::commands::Command;
 
 use crate::{
-    play_analysis::PlayAnalysis,
+    // play_analysis::PlayAnalysis,
+    bare_menu::BareMenu,
     playing::{ActionToCommand, ChromaticActionToCommand, FrettingAndPlucking},
-    synth_controller::{SynthController, SynthControllerSettings},
+    synth_controller::{self, SynthController, SynthControllerSettings},
 };
 
 pub const DISPLAY_SIZE: Size = Size::new(128, 64);
@@ -46,7 +47,7 @@ pub struct Interface {
     staff: Staff,
     // analysis: PlayAnalysis,
     states: MeasureState,
-    synth_controller: SynthController,
+    menu: BareMenu,
 
     // IO related
     io_state: IOState, // TODO: really necessary to store?
@@ -70,7 +71,7 @@ impl Interface {
             staff: Staff::new(DISPLAY_SIZE.width, Point::new(0, 0)),
             // analysis: PlayAnalysis::new(RhythmDefinition::default()),
             states: MeasureState::default(),
-            synth_controller: SynthController::new(SynthControllerSettings::default()),
+            menu: BareMenu::new(),
             io_state: IOState::default(),
             fretting_and_plucking: FrettingAndPlucking::default(),
             action_to_command: ChromaticActionToCommand::new(a!(1)),
@@ -103,6 +104,8 @@ impl Interface {
         // self.analysis.draw(target, Point { x: 0, y: 50 })?;
         self.states.draw(target, Point { x: 0, y: 0 })?;
 
+        self.menu.draw(target, Point { x: 0, y: 64 - 10 })?;
+
         Ok(())
     }
 
@@ -112,6 +115,8 @@ impl Interface {
         self.io_state = new_state;
 
         self.states.set_all(new_state.toggle_switches);
+
+        self.menu.update(new_state);
 
         let command = self
             .fretting_and_plucking
@@ -125,7 +130,7 @@ impl Interface {
     /// This function is very timing sensitive and should be called in regular intervals,
     /// using timer functionality or the rhythm will not be correct.
     pub fn next_synth_command(&mut self, t: u64) -> Vec<Command, 4> {
-        self.synth_controller.next_command()
+        self.menu.next_command()
     }
 
     // TODO: will be set by a menu, should be retrieved by main to call update correctly
