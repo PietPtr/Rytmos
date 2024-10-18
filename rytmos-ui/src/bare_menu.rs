@@ -1,13 +1,20 @@
+use embedded_graphics::{
+    pixelcolor::BinaryColor,
+    prelude::{DrawTarget, Point},
+};
+use heapless::Vec;
+use rytmos_synth::commands::Command;
+
 use crate::{
     interface::IOState,
-    synth_controller::{SynthController, SynthControllerSettingsUpdate},
+    synth_controller::{SynthController, SynthControllerSettings, SynthControllerSettingsUpdate},
 };
 
 #[derive(Debug, Default)]
 #[repr(u8)]
 enum PlayMode {
-    PlayPattern = 0,
     #[default]
+    PlayPattern = 0,
     PatternEveryOtherBar = 1,
     NeverPlayPattern = 2,
 }
@@ -37,38 +44,129 @@ impl PlayMode {
 ///         FRET4: TODO: dec metronome volume
 ///         PLUCK_LEFT: -
 ///         PLUCK_RIGHT: -
-pub struct BareMenu<'a> {
-    synth_controller: &'a mut SynthController,
+pub struct BareMenu {
+    pub synth_controller: SynthController,
     last_state: IOState,
     play_mode: PlayMode,
     saved_metronome_tempo: u8,
     metronome_enabled: bool,
 }
 
-impl<'a> BareMenu<'a> {
-    pub fn new(synth_controller: &'a mut SynthController) -> Self {
-        Self {
-            synth_controller,
+impl BareMenu {
+    pub fn new() -> Self {
+        let mut s = Self {
+            synth_controller: SynthController::new(SynthControllerSettings::default()),
             last_state: IOState::default(), // TODO: also do this in playing.rs?
             play_mode: PlayMode::default(),
             saved_metronome_tempo: 80,
             metronome_enabled: false,
+        };
+
+        s.apply_play_mode();
+
+        s
+    }
+
+    pub fn draw<D>(&self, target: &mut D, position: Point) -> Result<(), D::Error>
+    where
+        D: DrawTarget<Color = BinaryColor>,
+    {
+        let play_pause_position = position + Point { x: 10, y: 0 };
+
+        if self.synth_controller.playing() {
+            rytmos_symbols::draw_symbol(target, play_pause_position, rytmos_symbols::PLAYING)?;
+        } else {
+            rytmos_symbols::draw_symbol(target, play_pause_position, rytmos_symbols::PAUSED)?;
+        }
+
+        let playmode_position = position + Point { x: 46, y: 0 };
+
+        match self.play_mode {
+            PlayMode::PlayPattern => {
+                rytmos_symbols::draw_symbol(target, playmode_position, rytmos_symbols::LETTER_A)?;
+            }
+            PlayMode::PatternEveryOtherBar => {
+                rytmos_symbols::draw_symbol(target, playmode_position, rytmos_symbols::LETTER_B)?;
+            }
+            PlayMode::NeverPlayPattern => {
+                rytmos_symbols::draw_symbol(target, playmode_position, rytmos_symbols::LETTER_C)?;
+            }
+        }
+
+        let metronome_position = position + Point { x: 79, y: 0 };
+
+        if self.metronome_enabled {
+            let last_eighth = self.synth_controller.last_eighth();
+
+            if last_eighth % 2 == 1 {
+                rytmos_symbols::draw_symbol(
+                    target,
+                    metronome_position,
+                    rytmos_symbols::METRONOME_CENTER,
+                )?;
+            } else if (last_eighth / 2) % 2 == 1 {
+                rytmos_symbols::draw_symbol(
+                    target,
+                    metronome_position,
+                    rytmos_symbols::METRONOME_RIGHT,
+                )?;
+            } else {
+                rytmos_symbols::draw_symbol(
+                    target,
+                    metronome_position,
+                    rytmos_symbols::METRONOME_LEFT,
+                )?;
+            }
+        } else {
+            rytmos_symbols::draw_symbol(
+                target,
+                metronome_position,
+                rytmos_symbols::METRONOME_CENTER,
+            )?;
+        }
+
+        Ok(())
+    }
+
+    fn apply_play_mode(&mut self) {
+        match self.play_mode {
+            PlayMode::PlayPattern => {
+                self.synth_controller
+                    .update_settings(SynthControllerSettingsUpdate {
+                        play_pattern: Some(true),
+                        measures_silence: Some(0),
+                        ..Default::default()
+                    });
+            }
+            PlayMode::PatternEveryOtherBar => {
+                self.synth_controller
+                    .update_settings(SynthControllerSettingsUpdate {
+                        play_pattern: Some(true),
+                        measures_silence: Some(1),
+                        ..Default::default()
+                    });
+            }
+            PlayMode::NeverPlayPattern => {
+                self.synth_controller
+                    .update_settings(SynthControllerSettingsUpdate {
+                        play_pattern: Some(false),
+                        ..Default::default()
+                    });
+            }
         }
     }
 
-    // pub fn draw() // TODO: this
-
     pub fn update(&mut self, state: IOState) {
         macro_rules! was_menu_button_pressed {
-            ($i:expr) => {
+            ($i:expr) => {{
                 matches!(
                     (self.last_state.menu_buttons[$i], state.menu_buttons[$i]),
                     (true, false)
                 )
-            };
+            }};
         }
 
-        macro_rules! was_fret_pressed {
+        macro_rules! _was_fret_pressed {
             ($i:expr) => {
                 matches!(
                     (
@@ -83,7 +181,6 @@ impl<'a> BareMenu<'a> {
         let button1 = was_menu_button_pressed!(0);
         let button2 = was_menu_button_pressed!(1);
         let button3 = was_menu_button_pressed!(2);
-        let button4 = was_menu_button_pressed!(3);
 
         let mut metronome_changed = false;
 
@@ -92,7 +189,8 @@ impl<'a> BareMenu<'a> {
         }
 
         if button2 {
-            self.play_mode = self.play_mode.next()
+            self.play_mode = self.play_mode.next();
+            self.apply_play_mode();
         }
 
         if button3 {
@@ -101,18 +199,15 @@ impl<'a> BareMenu<'a> {
             metronome_changed = true;
         }
 
-        if button4 {
-            let fret1 = was_fret_pressed!(0);
-            let fret2 = was_fret_pressed!(1);
-
-            if fret1 {
+        if state.menu_buttons[3] {
+            if state.playing_buttons.fretting_buttons[0] {
                 metronome_changed = true;
-                (self.saved_metronome_tempo, _) = self.saved_metronome_tempo.overflowing_add(1);
+                self.saved_metronome_tempo = self.saved_metronome_tempo.saturating_add(1);
             }
 
-            if fret2 {
+            if state.playing_buttons.fretting_buttons[1] {
                 metronome_changed = true;
-                (self.saved_metronome_tempo, _) = self.saved_metronome_tempo.overflowing_sub(1);
+                self.saved_metronome_tempo = self.saved_metronome_tempo.saturating_sub(1).max(10);
             }
         }
 
@@ -129,5 +224,21 @@ impl<'a> BareMenu<'a> {
                     ..Default::default()
                 });
         }
+
+        self.last_state = state;
+    }
+
+    pub(crate) fn next_command(&mut self) -> Vec<Command, 4> {
+        self.synth_controller.next_command()
+    }
+
+    pub(crate) fn bpm(&self) -> u32 {
+        self.saved_metronome_tempo as u32
+    }
+}
+
+impl Default for BareMenu {
+    fn default() -> Self {
+        Self::new()
     }
 }

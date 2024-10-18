@@ -1,4 +1,5 @@
 use heapless::Vec;
+use log::{debug, info};
 use rytmos_engrave::{c, staff::Music};
 use rytmos_synth::commands::Command;
 
@@ -22,6 +23,7 @@ pub enum SynthControllerState {
     Stopped,
 }
 
+#[derive(Debug)]
 pub struct SynthController {
     settings: SynthControllerSettings,
     music: Vec<Music, 16>,
@@ -44,6 +46,10 @@ impl SynthController {
         self.music = music;
     }
 
+    pub fn start_over(&mut self) {
+        self.time = 0;
+    }
+
     /// Updates the internal settings of the synth controller and returns commands for the synth
     /// to reflect those settings.
     pub fn update_settings(&mut self, settings: SynthControllerSettingsUpdate) -> Vec<Command, 4> {
@@ -58,6 +64,13 @@ impl SynthController {
         self.settings = new_settings;
 
         Vec::new()
+    }
+
+    pub fn playing(&self) -> bool {
+        match self.state {
+            SynthControllerState::Playing => true,
+            SynthControllerState::Stopped => false,
+        }
     }
 
     pub fn play_or_stop_toggle(&mut self) {
@@ -76,21 +89,27 @@ impl SynthController {
     }
 
     pub fn next_command(&mut self) -> Vec<Command, 4> {
-        let commands = self.command_for_time(self.time);
+        let commands = self.command_for_time();
 
-        self.time += 1;
+        if self.state == SynthControllerState::Playing {
+            self.time += 1;
+        }
 
         commands
     }
 
-    pub fn command_for_time(&self, t: u64) -> Vec<Command, 4> {
+    pub fn last_eighth(&self) -> u64 {
+        self.time / 16 // TODO: this function is maybe correct now but very unclear
+    }
+
+    pub fn command_for_time(&mut self) -> Vec<Command, 4> {
         // TODO: play metronome tick?
-        if !self.settings.play_pattern {
+        if !self.settings.play_pattern || self.state == SynthControllerState::Stopped {
             return Vec::new();
         }
 
         // Current time indexed in sixteenths, looping over the measure we're playing
-        let t16 = (t % ((self.settings.measures_silence as u64 + 1) * 128)) as f64 / 4.;
+        let t16 = (self.time % ((self.settings.measures_silence as u64 + 1) * 64)) as f64 / 4.;
         let mut count16 = 0;
 
         let mut commands = Vec::new();
@@ -116,6 +135,10 @@ impl SynthController {
                 }
                 Music::Tie => last_was_tie = true,
             }
+        }
+
+        if !commands.is_empty() {
+            info!("{} {:?}", self.time, commands);
         }
 
         commands

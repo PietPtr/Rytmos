@@ -199,7 +199,7 @@ fn plot_samples(samples: &[i16]) -> Result<(), Box<dyn std::error::Error>> {
 fn test_command_serdes() {
     let mut rng = rand::thread_rng();
 
-    for _ in 0..1000000 {
+    for _ in 0..10000000 {
         let mut value: u32 = rng.gen();
         let command_id = rng.gen_range(0..8) & 0b111111;
 
@@ -210,7 +210,7 @@ fn test_command_serdes() {
             let serialized = cmd.serialize();
             assert_eq!(
                 value, serialized,
-                "Failed serdes test: {:#?} => {} =/= {}",
+                "Failed serdes test: {:#?} => \n{:032b} =/=\n{:032b}",
                 cmd, value, serialized
             );
         }

@@ -1,5 +1,6 @@
 use std::time::Instant;
 
+use defmt::info;
 use defmt_rtt as _;
 use embedded_graphics::{pixelcolor::BinaryColor, prelude::*};
 use embedded_graphics_simulator::{
@@ -32,6 +33,7 @@ fn main() -> Result<(), core::convert::Infallible> {
         fretting_buttons: [false; 4],
         plucking_buttons: [false; 2],
     };
+    let mut menu_buttons = [false; 4];
 
     let mut interface = Interface::new();
 
@@ -41,12 +43,14 @@ fn main() -> Result<(), core::convert::Infallible> {
         let io_state = IOState {
             toggle_switches: states,
             playing_buttons,
-            menu_buttons: [false; 4],
+            menu_buttons,
         };
 
         interface.draw(&mut display)?;
         let synth_commands = interface.update_io_state(io_state);
-        log::info!("{:?}", synth_commands);
+        if !synth_commands.is_empty() {
+            log::info!("synth commands for input: {:?}", synth_commands);
+        }
 
         window.update(&display);
 
@@ -59,6 +63,7 @@ fn main() -> Result<(), core::convert::Infallible> {
                 } => {
                     update_toggle_switches_states(&mut states, keycode, keymod);
                     update_playing_buttons(&mut playing_buttons, keycode, true);
+                    update_menu_buttons(&mut menu_buttons, keycode, true);
                 }
                 SimulatorEvent::KeyUp {
                     keycode,
@@ -66,17 +71,32 @@ fn main() -> Result<(), core::convert::Infallible> {
                     repeat: false,
                 } => {
                     update_playing_buttons(&mut playing_buttons, keycode, false);
+                    update_menu_buttons(&mut menu_buttons, keycode, false);
                 }
                 SimulatorEvent::Quit => break 'main,
                 _ => (),
             }
         }
 
-        while now.elapsed().as_millis() < PlayAnalysis::step_size_ms(60) as u128 {}
+        while now.elapsed().as_millis()
+            < PlayAnalysis::step_size_ms(interface.spm().max(10)) as u128
+        {}
         now = Instant::now();
+
+        let next_player_commands = interface.next_synth_command();
     }
 
     Ok(())
+}
+
+fn update_menu_buttons(menu_buttons: &mut [bool; 4], keycode: Keycode, down: bool) {
+    match keycode {
+        Keycode::Num9 => menu_buttons[0] = down,
+        Keycode::Num0 => menu_buttons[1] = down,
+        Keycode::LeftBracket => menu_buttons[2] = down,
+        Keycode::RightBracket => menu_buttons[3] = down,
+        _ => (),
+    }
 }
 
 fn update_playing_buttons(playing_buttons: &mut PlayingButtons, keycode: Keycode, down: bool) {

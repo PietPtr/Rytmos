@@ -5,7 +5,10 @@ use rytmos_engrave::staff::{Accidental, Note};
 pub enum Command {
     /// Note and velocity (encoded as a (velocity / 256) * scale)
     Play(Note, u8, u8),
+    /// Define default attack?
     SetAttack(u8, u8), // TODO: make something more ergonomic for this u8, u8 fixed point type
+    /// Play the tick of a metronome, with emphasis or not
+    Tick(bool),
 }
 
 impl Command {
@@ -43,6 +46,12 @@ impl Command {
             Command::SetAttack(attack, scale) => {
                 let command_id = 0b00001;
                 (attack as u32) | ((scale as u32) << 8) | (command_id << 26)
+            }
+            Command::Tick(emphasis) => {
+                let command_id = 0b00010;
+                let emphasis = emphasis as u32;
+
+                emphasis | (command_id << 26)
             }
         }
     }
@@ -85,7 +94,21 @@ impl Command {
             1 => {
                 let attack = value as u8;
                 let scale = (value >> 8) as u8;
-                Some(Self::SetAttack(attack, scale))
+                let reserved = value & 0b00000011_11111111_00000000_00000000;
+                if reserved == 0 {
+                    Some(Self::SetAttack(attack, scale))
+                } else {
+                    None
+                }
+            }
+            2 => {
+                let emphasis = (value & 1) == 1;
+                let reserved = value & 0b00000011_11111111_11111111_11111110;
+                if reserved == 0 {
+                    Some(Self::Tick(emphasis))
+                } else {
+                    None
+                } TODO: implement this ... somewhere
             }
             _ => None,
         }

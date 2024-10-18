@@ -38,6 +38,7 @@ impl PlayAnalysis {
         self.play_ptr = (self.play_ptr + 1) % PLAYED_BUFFER_SIZE
     }
 
+    // TODO: why is this function here??
     pub fn step_size_ms(bpm: u32) -> u32 {
         libm::roundf((60_000.0 / bpm as f32) / 32.0) as u32
     }
