@@ -58,7 +58,7 @@ impl BareMenu {
             synth_controller: SynthController::new(SynthControllerSettings::default()),
             last_state: IOState::default(), // TODO: also do this in playing.rs?
             play_mode: PlayMode::default(),
-            saved_metronome_tempo: 80,
+            saved_metronome_tempo: 60,
             metronome_enabled: false,
         };
 
@@ -96,27 +96,29 @@ impl BareMenu {
         let metronome_position = position + Point { x: 79, y: 0 };
 
         if self.metronome_enabled {
-            let last_eighth = self.synth_controller.last_eighth();
+            let beat = (self.synth_controller.beat() * 4.) as u64;
 
-            if last_eighth % 2 == 1 {
-                rytmos_symbols::draw_symbol(
-                    target,
-                    metronome_position,
-                    rytmos_symbols::METRONOME_CENTER,
-                )?;
-            } else if (last_eighth / 2) % 2 == 1 {
-                rytmos_symbols::draw_symbol(
-                    target,
-                    metronome_position,
-                    rytmos_symbols::METRONOME_RIGHT,
-                )?;
-            } else {
-                rytmos_symbols::draw_symbol(
-                    target,
-                    metronome_position,
-                    rytmos_symbols::METRONOME_LEFT,
-                )?;
-            }
+            let symbol = match beat {
+                0 => rytmos_symbols::METRONOME_CENTER,
+                1 => rytmos_symbols::METRONOME_LEFT,
+                2 => rytmos_symbols::METRONOME_LEFT,
+                3 => rytmos_symbols::METRONOME_CENTER,
+                4 => rytmos_symbols::METRONOME_CENTER,
+                5 => rytmos_symbols::METRONOME_RIGHT,
+                6 => rytmos_symbols::METRONOME_RIGHT,
+                7 => rytmos_symbols::METRONOME_CENTER,
+                8 => rytmos_symbols::METRONOME_CENTER,
+                9 => rytmos_symbols::METRONOME_LEFT,
+                10 => rytmos_symbols::METRONOME_LEFT,
+                11 => rytmos_symbols::METRONOME_CENTER,
+                12 => rytmos_symbols::METRONOME_CENTER,
+                13 => rytmos_symbols::METRONOME_RIGHT,
+                14 => rytmos_symbols::METRONOME_RIGHT,
+                15 => rytmos_symbols::METRONOME_CENTER,
+                _ => panic!("unexpected symbol beat {beat}"),
+            };
+
+            rytmos_symbols::draw_symbol(target, metronome_position, symbol)?;
         } else {
             rytmos_symbols::draw_symbol(
                 target,
@@ -182,8 +184,6 @@ impl BareMenu {
         let button2 = was_menu_button_pressed!(1);
         let button3 = was_menu_button_pressed!(2);
 
-        let mut metronome_changed = false;
-
         if button1 {
             self.synth_controller.play_or_stop_toggle();
         }
@@ -196,33 +196,21 @@ impl BareMenu {
         if button3 {
             self.metronome_enabled = !self.metronome_enabled;
 
-            metronome_changed = true;
+            self.synth_controller
+                .update_settings(SynthControllerSettingsUpdate {
+                    metronome: Some(self.metronome_enabled),
+                    ..Default::default()
+                });
         }
 
         if state.menu_buttons[3] {
             if state.playing_buttons.fretting_buttons[0] {
-                metronome_changed = true;
                 self.saved_metronome_tempo = self.saved_metronome_tempo.saturating_add(1);
             }
 
             if state.playing_buttons.fretting_buttons[1] {
-                metronome_changed = true;
                 self.saved_metronome_tempo = self.saved_metronome_tempo.saturating_sub(1).max(10);
             }
-        }
-
-        if metronome_changed {
-            let metronome_setting = if self.metronome_enabled {
-                Some(self.saved_metronome_tempo)
-            } else {
-                None
-            };
-
-            self.synth_controller
-                .update_settings(SynthControllerSettingsUpdate {
-                    metronome: Some(metronome_setting),
-                    ..Default::default()
-                });
         }
 
         self.last_state = state;

@@ -108,7 +108,7 @@ impl Command {
                     Some(Self::Tick(emphasis))
                 } else {
                     None
-                } TODO: implement this ... somewhere
+                }
             }
             _ => None,
         }

@@ -22,7 +22,7 @@ fn test_command_for_time() {
     let settings = SynthControllerSettings {
         play_pattern: true,
         measures_silence: 0,
-        metronome: None,
+        metronome: false,
     };
 
     let music_sequence = vec![

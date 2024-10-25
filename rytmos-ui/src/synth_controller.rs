@@ -1,5 +1,5 @@
 use heapless::Vec;
-use log::{debug, info};
+use log::info;
 use rytmos_engrave::{c, staff::Music};
 use rytmos_synth::commands::Command;
 
@@ -7,14 +7,14 @@ use rytmos_synth::commands::Command;
 pub struct SynthControllerSettings {
     pub play_pattern: bool,
     pub measures_silence: u8,
-    pub metronome: Option<u8>,
+    pub metronome: bool,
 }
 
 #[derive(Debug, Default, Clone, Copy)]
 pub struct SynthControllerSettingsUpdate {
     pub play_pattern: Option<bool>,
     pub measures_silence: Option<u8>,
-    pub metronome: Option<Option<u8>>,
+    pub metronome: Option<bool>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -27,7 +27,7 @@ pub enum SynthControllerState {
 pub struct SynthController {
     settings: SynthControllerSettings,
     music: Vec<Music, 16>,
-    time: u64,
+    time: u64, // time in sixteenths
     state: SynthControllerState,
 }
 
@@ -98,22 +98,31 @@ impl SynthController {
         commands
     }
 
-    pub fn last_eighth(&self) -> u64 {
-        self.time / 16 // TODO: this function is maybe correct now but very unclear
+    pub fn beat(&self) -> f64 {
+        (self.time % 16) as f64 / 4.
     }
 
     pub fn command_for_time(&mut self) -> Vec<Command, 4> {
-        // TODO: play metronome tick?
         if !self.settings.play_pattern || self.state == SynthControllerState::Stopped {
             return Vec::new();
         }
 
         // Current time indexed in sixteenths, looping over the measure we're playing
-        let t16 = (self.time % ((self.settings.measures_silence as u64 + 1) * 64)) as f64 / 4.;
+        let t16 = (self.time % ((self.settings.measures_silence as u64 + 1) * 16)) as f64;
         let mut count16 = 0;
 
         let mut commands = Vec::new();
         let mut last_was_tie = false;
+
+        let beat = self.beat();
+
+        if self.settings.metronome {
+            if beat == 0.0 {
+                commands.push(Command::Tick(true)).unwrap();
+            } else if [1.0, 2.0, 3.0].contains(&beat) {
+                commands.push(Command::Tick(false)).unwrap();
+            }
+        }
 
         for &music in self.music.iter() {
             match music {
@@ -138,7 +147,7 @@ impl SynthController {
         }
 
         if !commands.is_empty() {
-            info!("{} {:?}", self.time, commands);
+            info!("{} {} {:?}", self.time, t16, commands);
         }
 
         commands

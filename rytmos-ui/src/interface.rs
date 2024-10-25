@@ -4,6 +4,7 @@ use embedded_graphics::{
     primitives::{PrimitiveStyle, Rectangle},
 };
 use heapless::Vec;
+use log::info;
 use rytmos_engrave::{
     a,
     staff::{Clef, Music, Staff, StaffElement},
@@ -136,8 +137,9 @@ impl Interface {
         self.menu.next_command()
     }
 
-    /// So the driving main knows at how many _sixteenths_ per second to drive the interface.
+    /// So the driving main knows at how many _sixteenths_ per minute to drive the interface.
     pub fn spm(&self) -> u32 {
-        self.menu.bpm() * 4
+        let bpm = self.menu.bpm();
+        bpm * 4
     }
 }

@@ -78,12 +78,11 @@ fn main() -> Result<(), core::convert::Infallible> {
             }
         }
 
-        while now.elapsed().as_millis()
-            < PlayAnalysis::step_size_ms(interface.spm().max(10)) as u128
-        {}
-        now = Instant::now();
+        if now.elapsed().as_millis() > PlayAnalysis::step_size_ms(interface.spm().max(10)) as u128 {
+            let next_player_commands = interface.next_synth_command();
 
-        let next_player_commands = interface.next_synth_command();
+            now = Instant::now();
+        }
     }
 
     Ok(())
