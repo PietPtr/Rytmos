@@ -1,62 +1,85 @@
-use rytmos_engrave::staff::Note;
+use log::info;
+use rytmos_engrave::staff::{Accidental, Note};
 
-use crate::{commands::Command, synth::SAMPLE_RATE};
+use crate::commands::Command;
 
 use super::{
     samples::{strong::STRONG_WAV, weak::WEAK_WAV},
     Synth,
 };
 
-pub struct MetronomeSettings {
-    pub bpm: usize,
-    pub accent_one: bool,
-}
-
 pub struct MetronomeSynth {
-    pub settings: MetronomeSettings,
-    beat_count: usize,
     sample: usize,
     velocity: f32,
+    play_sample: Option<Sample>,
+}
+
+enum Sample {
+    Strong,
+    Weak,
 }
 
 impl MetronomeSynth {
-    pub fn new(settings: MetronomeSettings) -> Self {
+    pub fn new() -> Self {
         Self {
-            settings,
-            beat_count: 0,
             sample: 0,
             velocity: 0.,
+            play_sample: None,
         }
+    }
+}
+
+impl Default for MetronomeSynth {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
 impl Synth for MetronomeSynth {
-    type Settings = MetronomeSettings;
+    type Settings = ();
 
-    fn configure(&mut self, settings: Self::Settings) {
-        self.settings = settings;
-    }
+    fn configure(&mut self, _settings: Self::Settings) {}
 
     /// Ignores the frequency of the note and plays the metronome at the given velocity as amplifier
     /// with the set BPM.
-    fn play(&mut self, _: Note, velocity: f32) {
+    fn play(&mut self, note: Note, velocity: f32) {
         self.velocity = velocity;
+
+        match note {
+            Note::A(Accidental::Natural, _) => self.play_sample = Some(Sample::Strong),
+            Note::B(Accidental::Natural, _) => self.play_sample = Some(Sample::Weak),
+            _ => info!("unknown metronome note {note:?}"),
+        }
     }
 
+    // This cannot be synced to anything. Change it such that play actually plays the sample and decides on emphasis based on note.
     fn next(&mut self) -> i16 {
-        let next_beat = (60. / self.settings.bpm as f32) * SAMPLE_RATE;
+        let sample = match self.play_sample {
+            Some(Sample::Strong) => {
+                let sample_to_play = STRONG_WAV.get(self.sample);
+                self.sample += 1;
 
-        self.sample += 1;
+                match sample_to_play {
+                    Some(sample) => *sample,
+                    None => {
+                        self.play_sample = None; // Exhausted audio fragment.
+                        0
+                    }
+                }
+            }
+            Some(Sample::Weak) => {
+                let sample_to_play = WEAK_WAV.get(self.sample);
+                self.sample += 1;
 
-        if self.sample == (next_beat as usize) {
-            self.sample = 0;
-            self.beat_count = (1 + self.beat_count) % 4;
-        }
-
-        let sample = if self.beat_count == 0 && self.settings.accent_one {
-            *STRONG_WAV.get(self.sample).unwrap_or(&0)
-        } else {
-            *WEAK_WAV.get(self.sample).unwrap_or(&0)
+                match sample_to_play {
+                    Some(sample) => *sample,
+                    None => {
+                        self.play_sample = None;
+                        0
+                    }
+                }
+            }
+            None => 0,
         };
 
         (sample as f32 * self.velocity) as i16

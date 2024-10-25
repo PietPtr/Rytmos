@@ -9,6 +9,8 @@ pub enum Command {
     SetAttack(u8, u8), // TODO: make something more ergonomic for this u8, u8 fixed point type
     /// Play the tick of a metronome, with emphasis or not
     Tick(bool),
+    /// Set the tempo of the synth in _sixteenths_ per minute (whatever that means for a synth)
+    SetTempo(u16),
 }
 
 impl Command {
@@ -52,6 +54,11 @@ impl Command {
                 let emphasis = emphasis as u32;
 
                 emphasis | (command_id << 26)
+            }
+            Command::SetTempo(spm) => {
+                let command_id = 0b00011;
+                let spm = spm as u32;
+                spm | command_id << 26
             }
         }
     }
@@ -106,6 +113,15 @@ impl Command {
                 let reserved = value & 0b00000011_11111111_11111111_11111110;
                 if reserved == 0 {
                     Some(Self::Tick(emphasis))
+                } else {
+                    None
+                }
+            }
+            3 => {
+                let spm = (value & 0xffff) as u16;
+                let reserved = value & 0b00000011_11111111_00000000_00000000;
+                if reserved == 0 {
+                    Some(Self::SetTempo(spm))
                 } else {
                     None
                 }

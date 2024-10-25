@@ -40,11 +40,7 @@ impl PlayAnalysis {
 
     // TODO: why is this function here??
     pub fn step_size_ms(spm: u32) -> u32 {
-        let time = libm::roundf(60_000.0 / spm as f32) as u32;
-
-        // log::info!("time: {time}");
-
-        time
+        libm::roundf(60_000.0 / spm as f32) as u32
     }
 
     pub fn set_rhythm(&mut self, rhythm: RhythmDefinition) {

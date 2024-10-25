@@ -4,7 +4,6 @@ use embedded_graphics::{
     primitives::{PrimitiveStyle, Rectangle},
 };
 use heapless::Vec;
-use log::info;
 use rytmos_engrave::{
     a,
     staff::{Clef, Music, Staff, StaffElement},

@@ -1,6 +1,5 @@
 use std::time::Instant;
 
-use defmt::info;
 use defmt_rtt as _;
 use embedded_graphics::{pixelcolor::BinaryColor, prelude::*};
 use embedded_graphics_simulator::{
@@ -79,7 +78,7 @@ fn main() -> Result<(), core::convert::Infallible> {
         }
 
         if now.elapsed().as_millis() > PlayAnalysis::step_size_ms(interface.spm().max(10)) as u128 {
-            let next_player_commands = interface.next_synth_command();
+            let _next_player_commands = interface.next_synth_command();
 
             now = Instant::now();
         }

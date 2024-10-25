@@ -7,7 +7,7 @@ use rytmos_synth::{
     commands::Command,
     synth::{
         lpf::LowPassFilter,
-        metronome::{MetronomeSettings, MetronomeSynth},
+        metronome::MetronomeSynth,
         overtone::{OvertoneSynth, OvertoneSynthSettings},
         sine::{SineSynth, SineSynthSettings},
         vibrato::{VibratoSynth, VibratoSynthSettings},
@@ -96,10 +96,7 @@ fn test_lpf() {
 fn test_metronome() {
     init_logger();
 
-    let mut synth = MetronomeSynth::new(MetronomeSettings {
-        bpm: 120,
-        accent_one: true,
-    });
+    let mut synth = MetronomeSynth::new();
 
     synth.play(a!(0), 1.0);
 
@@ -199,6 +196,8 @@ fn plot_samples(samples: &[i16]) -> Result<(), Box<dyn std::error::Error>> {
 fn test_command_serdes() {
     let mut rng = rand::thread_rng();
 
+    let mut valid_commands = 0;
+
     for _ in 0..10000000 {
         let mut value: u32 = rng.gen();
         let command_id = rng.gen_range(0..8) & 0b111111;
@@ -207,6 +206,7 @@ fn test_command_serdes() {
         value |= command_id << 26;
 
         if let Some(cmd) = Command::deserialize(value) {
+            valid_commands += 1;
             let serialized = cmd.serialize();
             assert_eq!(
                 value, serialized,
@@ -215,6 +215,9 @@ fn test_command_serdes() {
             );
         }
     }
+
+    println!("Serialized {} valid commands.", valid_commands);
+    assert!(valid_commands > 0);
 }
 
 fn export_to_wav(samples: Vec<i16>, file_path: &str) {

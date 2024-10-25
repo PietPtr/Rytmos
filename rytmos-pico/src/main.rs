@@ -31,10 +31,7 @@ use rp_pico::{
 use rytmos_engrave::*;
 use rytmos_synth::{
     commands::Command,
-    synth::{
-        sine::{SineSynth, SineSynthSettings},
-        Synth,
-    },
+    synth::{master::OvertoneAndMetronomeSynth, Synth},
 };
 
 mod plls;
@@ -111,11 +108,7 @@ fn synth_core(sys_freq: u32) -> ! {
 
     info!("Start Synth core.");
 
-    let mut synth = SineSynth::new(SineSynthSettings {
-        attack_gain: 2.0,
-        initial_phase: 0.0,
-        decay_per_second: 0.4,
-    });
+    let mut synth = OvertoneAndMetronomeSynth::new();
 
     loop {
         sio.fifo
