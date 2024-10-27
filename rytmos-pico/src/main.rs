@@ -9,23 +9,34 @@ pub static BOOT2_FIRMWARE: [u8; 256] = rp2040_boot2::BOOT_LOADER_W25Q080;
 use cortex_m::singleton;
 use defmt::*;
 use defmt_rtt as _;
+use embedded_graphics::{
+    mono_font::{ascii::FONT_6X10, MonoTextStyleBuilder},
+    pixelcolor::BinaryColor,
+    prelude::*,
+    text::{Baseline, Text},
+};
 use fugit::HertzU32;
+use fugit::RateExtU32;
 use panic_probe as _;
 use pio_proc::pio_file;
+use rytmos_ui::interface::{IOState, Interface};
+use sh1106::{prelude::*, Builder};
 
 use rp_pico::{
     entry,
     hal::{
         clocks::{Clock, ClockSource, ClocksManager, InitError},
         dma::{double_buffer, DMAExt},
-        gpio::{self, FunctionPio0},
+        gpio::{self, FunctionPio0, PullDown, PullType, PullUp},
         multicore::{Multicore, Stack},
         pac,
         pio::{Buffers, PIOBuilder, PIOExt, PinDir, ShiftDirection},
         pll::{common_configs::PLL_USB_48MHZ, setup_pll_blocking},
         sio::Sio,
+        timer::Instant,
         watchdog::Watchdog,
         xosc::setup_xosc_blocking,
+        Timer,
     },
 };
 use rytmos_engrave::*;
@@ -214,7 +225,7 @@ fn main() -> ! {
 
     let mut delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().to_Hz());
 
-    let _pins = gpio::Pins::new(
+    let pins = gpio::Pins::new(
         pac.IO_BANK0,
         pac.PADS_BANK0,
         sio.gpio_bank0,
@@ -230,37 +241,55 @@ fn main() -> ! {
         synth_core(sys_freq)
     });
 
+    let sda_pin: gpio::Pin<_, gpio::FunctionI2C, PullUp> = pins.gpio16.reconfigure();
+    let scl_pin: gpio::Pin<_, gpio::FunctionI2C, PullUp> = pins.gpio17.reconfigure();
+
+    let i2c = rp_pico::hal::I2C::i2c0(
+        pac.I2C0,
+        sda_pin,
+        scl_pin,
+        400.kHz(),
+        &mut pac.RESETS,
+        &clocks.peripheral_clock,
+    );
+
     info!("Start I/O thread.");
 
-    let commands = [
-        Command::Play(c!(2), 155, 1),
-        Command::Play(d!(2), 225, 1),
-        Command::Play(e!(2), 240, 1),
-        Command::Play(c!(2), 150, 2),
-        Command::Play(c!(2), 0, 0),
-        Command::Play(c!(2), 155, 1),
-        Command::Play(d!(2), 225, 1),
-        Command::Play(e!(2), 240, 1),
-        Command::Play(c!(2), 150, 2),
-        Command::Play(c!(2), 0, 0),
-        Command::Play(e!(2), 240, 1),
-        Command::Play(f!(2), 240, 1),
-        Command::Play(g!(2), 200, 1),
-        Command::Play(g!(2), 200, 1),
-        Command::Play(c!(2), 0, 0),
-        Command::Play(c!(2), 0, 0),
-    ];
+    let mut display: GraphicsMode<_> = Builder::new()
+        .with_size(DisplaySize::Display128x64)
+        .connect_i2c(i2c)
+        .into();
 
-    let mut i = 0;
+    display.init().unwrap();
+    display.flush().unwrap();
+
+    let mut interface = Interface::new();
+
+    let timer = Timer::new(pac.TIMER, &mut pac.RESETS, &clocks);
+
     loop {
-        delay.delay_ms(800);
+        // TODO: write lib that reads all the connected IO.
+        let io_state = IOState::default();
 
-        sio.fifo.write(commands[i].serialize());
+        let start = timer.get_counter();
+        interface.draw(&mut display).unwrap();
+        let end = timer.get_counter();
+        info!("Draw took {:?}us", end - start);
 
-        if i > commands.len() {
-            i = 0;
-        } else {
-            i += 1;
+        let play_commands = interface.update_io_state(io_state);
+        if !play_commands.is_empty() {
+            info!("synth commands for input: {:?}", play_commands);
+        }
+
+        // TODO: tie this to an interrupt for accurate timing that factors in bpm
+        let playback_commands = interface.next_synth_command();
+
+        for command in play_commands {
+            sio.fifo.write(command.serialize());
+        }
+
+        for command in playback_commands {
+            sio.fifo.write(command.serialize());
         }
     }
 }
