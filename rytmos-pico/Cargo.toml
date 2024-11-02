@@ -25,6 +25,7 @@ rytmos-engrave = { path = "../rytmos-engrave" }
 rytmos-scribe = { path = "../rytmos-scribe" }
 rytmos-synth = { path = "../rytmos-synth" }
 rytmos-ui = { path = "../rytmos-ui" }
+micromath = "2.1.0"
 
 # cargo build/run
 [profile.dev]

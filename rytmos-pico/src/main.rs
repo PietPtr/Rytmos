@@ -6,19 +6,20 @@
 #[used]
 pub static BOOT2_FIRMWARE: [u8; 256] = rp2040_boot2::BOOT_LOADER_W25Q080;
 
-use cortex_m::singleton;
+use core::cell::RefCell;
+
+use crate::pac::interrupt;
+use cortex_m::{interrupt::Mutex, singleton};
 use defmt::*;
 use defmt_rtt as _;
-use embedded_graphics::{
-    mono_font::{ascii::FONT_6X10, MonoTextStyleBuilder},
-    pixelcolor::BinaryColor,
-    prelude::*,
-    text::{Baseline, Text},
-};
+use fugit::Duration;
 use fugit::HertzU32;
 use fugit::RateExtU32;
+use heapless::Vec;
 use panic_probe as _;
 use pio_proc::pio_file;
+use rp_pico::hal::timer::Alarm;
+use rp_pico::hal::timer::Alarm1;
 use rytmos_ui::interface::{IOState, Interface};
 use sh1106::{prelude::*, Builder};
 
@@ -27,19 +28,18 @@ use rp_pico::{
     hal::{
         clocks::{Clock, ClockSource, ClocksManager, InitError},
         dma::{double_buffer, DMAExt},
-        gpio::{self, FunctionPio0, PullDown, PullType, PullUp},
+        gpio::{self, FunctionPio0, PullUp},
         multicore::{Multicore, Stack},
         pac,
         pio::{Buffers, PIOBuilder, PIOExt, PinDir, ShiftDirection},
         pll::{common_configs::PLL_USB_48MHZ, setup_pll_blocking},
-        sio::Sio,
+        sio::{Sio, SioFifo},
         timer::Instant,
         watchdog::Watchdog,
         xosc::setup_xosc_blocking,
         Timer,
     },
 };
-use rytmos_engrave::*;
 use rytmos_synth::{
     commands::Command,
     synth::{master::OvertoneAndMetronomeSynth, Synth},
@@ -141,6 +141,10 @@ fn synth_core(sys_freq: u32) -> ! {
     }
 }
 
+static FIFO: Mutex<RefCell<Option<SioFifo>>> = Mutex::new(RefCell::new(None));
+static TIME_DRIVER: Mutex<RefCell<Option<TimeDriver>>> = Mutex::new(RefCell::new(None));
+static ALARM: Mutex<RefCell<Option<Alarm1>>> = Mutex::new(RefCell::new(None));
+
 #[entry]
 fn main() -> ! {
     let mut pac = pac::Peripherals::take().unwrap();
@@ -223,7 +227,7 @@ fn main() -> ! {
             .unwrap();
     }
 
-    let mut delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().to_Hz());
+    let mut _delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().to_Hz());
 
     let pins = gpio::Pins::new(
         pac.IO_BANK0,
@@ -239,6 +243,21 @@ fn main() -> ! {
     let core1 = &mut cores[1];
     let _test = core1.spawn(unsafe { &mut CORE1_STACK.mem }, move || {
         synth_core(sys_freq)
+    });
+
+    let mut timer = Timer::new(pac.TIMER, &mut pac.RESETS, &clocks);
+    let mut alarm = timer.alarm_1().unwrap();
+
+    cortex_m::interrupt::free(move |cs| {
+        FIFO.borrow(cs).replace(Some(sio.fifo));
+        TIME_DRIVER.borrow(cs).replace(Some(TimeDriver::new(60)));
+
+        alarm
+            .schedule(Duration::<u32, 1, 1000000>::millis(1))
+            .unwrap();
+        alarm.enable_interrupt();
+
+        ALARM.borrow(cs).replace(Some(alarm));
     });
 
     let sda_pin: gpio::Pin<_, gpio::FunctionI2C, PullUp> = pins.gpio16.reconfigure();
@@ -265,31 +284,172 @@ fn main() -> ! {
 
     let mut interface = Interface::new();
 
-    let timer = Timer::new(pac.TIMER, &mut pac.RESETS, &clocks);
+    // every so much time (which should be every couple of frames),
+    // find out how many sixteenths will pass in the next interval
+    // Fetch the next commands for those next sixteenths from the interface
+    // Store them and a timestamp (in sixteenths?) in a global mutex
+    // The interrupt handling synth commands for playback will take the commands from there
+    // A BPM change should also somehow be communicated over that channel?
+
+    // so there would still be a hickup if a sixteenth fires right when the new commands are transferred,
+    // since then this loop will have the lock on that. Since it's only copying stuff into a different vec, should be fast?
+
+    const FILL_TIME_DRIVER_TIME_MS: f32 = 100.;
+
+    // TODO: disentangle this whole mess
+    let mut last_driver_fill = Instant::from_ticks(0);
+    let mut time = 0;
 
     loop {
         // TODO: write lib that reads all the connected IO.
         let io_state = IOState::default();
 
+        // -- Drawing --
         let start = timer.get_counter();
         interface.draw(&mut display).unwrap();
         let end = timer.get_counter();
-        info!("Draw took {:?}us", end - start);
+        info!("Draw took {}us", (end - start).to_micros());
 
+        // -- Play inputs --
         let play_commands = interface.update_io_state(io_state);
         if !play_commands.is_empty() {
-            info!("synth commands for input: {:?}", play_commands);
+            info!("synth commands for input: {}", play_commands.len());
         }
 
-        // TODO: tie this to an interrupt for accurate timing that factors in bpm
-        let playback_commands = interface.next_synth_command();
+        cortex_m::interrupt::free(|cs| {
+            let mut fifo = FIFO.borrow(cs).take().unwrap();
 
-        for command in play_commands {
-            sio.fifo.write(command.serialize());
-        }
+            for command in play_commands {
+                fifo.write(command.serialize());
+            }
 
-        for command in playback_commands {
-            sio.fifo.write(command.serialize());
+            FIFO.borrow(cs).replace(Some(fifo));
+        });
+
+        // -- Playback --
+
+        let now = timer.get_counter();
+
+        if ((now - last_driver_fill).to_millis() as f32) > FILL_TIME_DRIVER_TIME_MS {
+            last_driver_fill = timer.get_counter();
+
+            let spm = interface.spm();
+            let ms_per_sixteenth = 60_000. / (spm as f32);
+            let sixteenths_to_fetch = (FILL_TIME_DRIVER_TIME_MS / ms_per_sixteenth).ceil() as usize;
+
+            let mut commands = Vec::new();
+
+            for _ in 0..sixteenths_to_fetch {
+                time += 1;
+
+                let mut t_commands = interface.next_synth_command();
+
+                while t_commands.is_full() {
+                    commands
+                        .push(TimedCommand {
+                            sixteenth: time,
+                            command: t_commands.pop().unwrap(),
+                        })
+                        .unwrap();
+                }
+            }
+
+            cortex_m::interrupt::free(|cs| {
+                let mut time_driver = TIME_DRIVER.borrow(cs).take().unwrap();
+
+                time_driver.spm = spm;
+                time_driver.push_commands(commands).unwrap();
+
+                TIME_DRIVER.borrow(cs).replace(Some(time_driver));
+            });
         }
     }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum TimeDriverError {
+    CommandsFull,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct TimedCommand {
+    pub sixteenth: u32,
+    pub command: Command,
+}
+
+// TODO: move from this file
+/// Lives once in a global mutex. Gets commands quickly written to it every on a ~100ms scale,
+/// which will be retrieved from this struct once the alarm goes off.
+/// Also stores BPM such that the next alarm can be scheduled.
+struct TimeDriver {
+    pub spm: u32,
+    commands: Vec<TimedCommand, 32>,
+    time: u32,
+}
+
+impl TimeDriver {
+    pub fn new(spm: u32) -> Self {
+        Self {
+            spm,
+            commands: Vec::new(),
+            time: 0,
+        }
+    }
+
+    pub fn push_commands(
+        &mut self,
+        commands: Vec<TimedCommand, 16>,
+    ) -> Result<(), TimeDriverError> {
+        if let Err(()) = self.commands.extend_from_slice(commands.as_slice()) {
+            Err(TimeDriverError::CommandsFull)
+        } else {
+            Ok(())
+        }
+    }
+
+    pub fn time_until_next_us(&self) -> u32 {
+        (60_000_000. / (self.spm as f32)).round() as u32
+    }
+
+    pub fn step_time_and_get_commands(&mut self) -> Vec<Command, 4> {
+        self.time += 1;
+
+        let mut now_commands: Vec<_, 4> = Vec::new();
+
+        while self.commands.is_full() && self.commands.first().unwrap().sixteenth == self.time {
+            now_commands.push(self.commands.remove(0).command).unwrap() // TODO: whew this is inefficient
+        }
+
+        now_commands
+    }
+}
+
+#[interrupt]
+#[allow(non_snake_case)]
+fn TIMER_IRQ_1() {
+    cortex_m::interrupt::free(|cs| {
+        let mut time_driver = TIME_DRIVER.borrow(cs).take().unwrap();
+
+        let delay_in_us = time_driver.time_until_next_us();
+
+        let mut alarm = ALARM.borrow(cs).take().unwrap();
+        alarm.clear_interrupt();
+        alarm
+            .schedule(Duration::<u32, 1, 1000000>::micros(delay_in_us))
+            .unwrap();
+        alarm.enable_interrupt();
+        ALARM.borrow(cs).replace(Some(alarm));
+
+        let commands = time_driver.step_time_and_get_commands();
+
+        let mut fifo = FIFO.borrow(cs).take().unwrap();
+
+        for command in commands {
+            fifo.write(command.serialize());
+        }
+
+        FIFO.borrow(cs).replace(Some(fifo));
+
+        TIME_DRIVER.borrow(cs).replace(Some(time_driver));
+    })
 }

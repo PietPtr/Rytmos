@@ -129,7 +129,7 @@ impl Interface {
         command.into_iter().collect::<Vec<_, 4>>()
     }
 
-    /// Gets the next command for the synth, given the time t in 128th notes.
+    /// Gets the next command for the synth, steps forward in sixteenth notes.
     /// This function is very timing sensitive and should be called in regular intervals,
     /// using timer functionality or the rhythm will not be correct.
     pub fn next_synth_command(&mut self) -> Vec<Command, 4> {

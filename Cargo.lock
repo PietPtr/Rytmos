@@ -1716,6 +1716,7 @@ dependencies = [
  "fugit",
  "heapless 0.7.17",
  "libm",
+ "micromath",
  "panic-probe",
  "pio",
  "pio-proc",
