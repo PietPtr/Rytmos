@@ -12,17 +12,16 @@ use crate::pac::interrupt;
 use cortex_m::{interrupt::Mutex, singleton};
 use defmt::*;
 use defmt_rtt as _;
+use embedded_hal::digital::v2::OutputPin;
 use fugit::Duration;
 use fugit::HertzU32;
 use fugit::RateExtU32;
 use heapless::Vec;
+use micromath::F32Ext;
 use panic_probe as _;
 use pio_proc::pio_file;
 use rp_pico::hal::timer::Alarm;
 use rp_pico::hal::timer::Alarm1;
-use rytmos_ui::interface::{IOState, Interface};
-use sh1106::{prelude::*, Builder};
-
 use rp_pico::{
     entry,
     hal::{
@@ -40,6 +39,11 @@ use rp_pico::{
         Timer,
     },
 };
+use rytmos_scribe::sixteen_switches::SwitchState;
+use rytmos_ui::interface::PlayingButtons;
+use rytmos_ui::interface::{IOState, Interface};
+use sh1106::{prelude::*, Builder};
+
 use rytmos_synth::{
     commands::Command,
     synth::{master::OvertoneAndMetronomeSynth, Synth},
@@ -106,6 +110,7 @@ fn synth_core(sys_freq: u32) -> ! {
         (i2s_send_lrclk_pin.id().num, PinDir::Output),
         (i2s_send_sclk_pin.id().num, PinDir::Output),
     ]);
+    sm1.start();
 
     let dma_channels = pac.DMA.split(&mut pac.RESETS);
     let i2s_tx_buf1 = singleton!(: [u32; BUFFER_SIZE*2] = [12345; BUFFER_SIZE*2]).unwrap();
@@ -118,6 +123,23 @@ fn synth_core(sys_freq: u32) -> ! {
     delay.delay_ms(100);
 
     info!("Start Synth core.");
+
+    let mut t: f64 = 0.;
+    let sample = |t| (t / 400.2272727) % 1.0;
+
+    loop {
+        let (next_tx_buf, next_tx_transfer) = i2s_tx_transfer.wait();
+        for (i, e) in next_tx_buf.iter_mut().enumerate() {
+            if i % 2 == 0 {
+                t += 1.;
+                *e = (sample(t) * u32::MAX as f64) as u32;
+            } else {
+                *e = (sample(t) * u32::MAX as f64) as u32;
+            }
+        }
+        // info!("t={} sample={} ", t, sample(t));
+        i2s_tx_transfer = next_tx_transfer.read_next(next_tx_buf);
+    }
 
     let mut synth = OvertoneAndMetronomeSynth::new();
 
@@ -227,7 +249,7 @@ fn main() -> ! {
             .unwrap();
     }
 
-    let mut _delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().to_Hz());
+    let mut delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().to_Hz());
 
     let pins = gpio::Pins::new(
         pac.IO_BANK0,
@@ -267,7 +289,7 @@ fn main() -> ! {
         pac.I2C0,
         sda_pin,
         scl_pin,
-        400.kHz(),
+        100.kHz(),
         &mut pac.RESETS,
         &clocks.peripheral_clock,
     );
@@ -284,6 +306,43 @@ fn main() -> ! {
 
     let mut interface = Interface::new();
 
+    loop {
+        // TODO: write lib that reads all the connected IO.
+        let io_state = IOState::default();
+
+        // -- Drawing --
+        let start = timer.get_counter();
+        display.flush().unwrap();
+        interface.draw(&mut display).unwrap();
+        let end = timer.get_counter();
+        info!("Draw took {}us", (end - start).to_micros());
+
+        // -- Play inputs --
+        let play_commands = interface.update_io_state(IOState {
+            toggle_switches: [
+                SwitchState::Atck,
+                SwitchState::Noop,
+                SwitchState::Noop,
+                SwitchState::Noop,
+                SwitchState::Mute,
+                SwitchState::Atck,
+                SwitchState::Mute,
+                SwitchState::Atck,
+                SwitchState::Mute,
+                SwitchState::Atck,
+                SwitchState::Atck,
+                SwitchState::Noop,
+                SwitchState::Atck,
+                SwitchState::Noop,
+                SwitchState::Atck,
+                SwitchState::Noop,
+            ],
+            playing_buttons: PlayingButtons::default(),
+            menu_buttons: [false; 4],
+        });
+    }
+
+    /*
     // every so much time (which should be every couple of frames),
     // find out how many sixteenths will pass in the next interval
     // Fetch the next commands for those next sixteenths from the interface
@@ -364,6 +423,7 @@ fn main() -> ! {
             });
         }
     }
+    // */
 }
 
 #[derive(Debug, Clone, Copy)]

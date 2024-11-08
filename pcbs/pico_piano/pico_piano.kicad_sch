@@ -2542,7 +2542,7 @@
 		(uuid "2cdff331-950e-41c8-8fbd-4152f5ac4f12")
 	)
 	(label "A"
-		(at 91.44 113.03 0)
+		(at 91.44 107.95 0)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -2586,7 +2586,7 @@
 		(uuid "3196c980-a86e-408a-8b84-c7394a99d251")
 	)
 	(label "GIS"
-		(at 91.44 115.57 0)
+		(at 91.44 105.41 0)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -2630,7 +2630,7 @@
 		(uuid "575f726d-ae10-4065-8350-690c12debcc8")
 	)
 	(label "AIS"
-		(at 91.44 107.95 0)
+		(at 91.44 113.03 0)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -2663,7 +2663,7 @@
 		(uuid "644bb416-1f16-44d8-be61-30af953371af")
 	)
 	(label "B"
-		(at 91.44 105.41 0)
+		(at 91.44 115.57 0)
 		(fields_autoplaced yes)
 		(effects
 			(font

@@ -101,7 +101,7 @@ impl Interface {
         )?;
 
         // self.analysis.draw(target, Point { x: 0, y: 50 })?;
-        self.states.draw(target, Point { x: 0, y: 0 })?;
+        // self.states.draw(target, Point { x: 0, y: 0 })?;
 
         self.menu.draw(target, Point { x: 0, y: 64 - 10 })?;
 
