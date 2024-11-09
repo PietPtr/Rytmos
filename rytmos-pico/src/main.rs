@@ -55,11 +55,14 @@ mod plls;
 const EXTERNAL_XTAL_FREQ_HZ: HertzU32 = HertzU32::from_raw(12_000_000u32);
 const RP2040_CLOCK_HZ: HertzU32 = HertzU32::from_raw(307_200_000u32);
 
+// TODO: these settings result in 40kHz, not 48kHz.
 const SAMPLE_RATE: HertzU32 = HertzU32::from_raw(48_000u32);
+const PIO_INSTRUCTIONS_PER_SAMPLE: u32 = 5;
 
-const I2S_PIO_CLOCK_HZ: HertzU32 = HertzU32::from_raw(SAMPLE_RATE.raw() * 64u32 * 5);
+const I2S_PIO_CLOCK_HZ: HertzU32 =
+    HertzU32::from_raw(SAMPLE_RATE.raw() * 64u32 * PIO_INSTRUCTIONS_PER_SAMPLE);
 const I2S_PIO_CLOCKDIV_INT: u16 = (RP2040_CLOCK_HZ.raw() / I2S_PIO_CLOCK_HZ.raw()) as u16;
-const I2S_PIO_CLOCKDIV_FRAC: u8 = 0u8;
+const I2S_PIO_CLOCKDIV_FRAC: u8 = 0;
 
 const BUFFER_SIZE: usize = 16;
 
@@ -138,7 +141,7 @@ fn synth_core(sys_freq: u32) -> ! {
                 *e = if sample { u32::MAX - 5 } else { 5 };
             }
 
-            if t > 100 {
+            if t > 200 {
                 t = 0;
                 sample = !sample;
             }

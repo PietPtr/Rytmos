@@ -31,14 +31,14 @@
 .wrap_target    
     set y, 30 [2]       side 0b01
 loopLch:
-    out pins, 1 [1]     side 0b00;MSBからLSBの1つ前まで
+    out pins, 1 [2]     side 0b00;MSBからLSBの1つ前まで
     jmp y-- loopLch [2] side 0b01
-    out pins, 1 [1]     side 0b10;LSB
+    out pins, 1 [2]     side 0b10;LSB
     set y, 30 [2]       side 0b11
 loopRch:
-    out pins, 1 [1]     side 0b10;MSBからLSBの1つ前まで
+    out pins, 1 [2]     side 0b10;MSBからLSBの1つ前まで
     jmp y-- loopRch [2] side 0b11
-    out pins, 1 [1]     side 0b00;LSB
+    out pins, 1 [2]     side 0b00;LSB
 .wrap
 
 ; I2S receive
