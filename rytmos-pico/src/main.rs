@@ -7,6 +7,7 @@
 pub static BOOT2_FIRMWARE: [u8; 256] = rp2040_boot2::BOOT_LOADER_W25Q080;
 
 use core::cell::RefCell;
+use core::u32;
 
 use crate::pac::interrupt;
 use cortex_m::{interrupt::Mutex, singleton};
@@ -54,9 +55,9 @@ mod plls;
 const EXTERNAL_XTAL_FREQ_HZ: HertzU32 = HertzU32::from_raw(12_000_000u32);
 const RP2040_CLOCK_HZ: HertzU32 = HertzU32::from_raw(307_200_000u32);
 
-const SAMPLE_RATE: HertzU32 = HertzU32::from_raw(96_000u32);
+const SAMPLE_RATE: HertzU32 = HertzU32::from_raw(48_000u32);
 
-const I2S_PIO_CLOCK_HZ: HertzU32 = HertzU32::from_raw(SAMPLE_RATE.raw() * 64u32 * 5u32);
+const I2S_PIO_CLOCK_HZ: HertzU32 = HertzU32::from_raw(SAMPLE_RATE.raw() * 64u32 * 5);
 const I2S_PIO_CLOCKDIV_INT: u16 = (RP2040_CLOCK_HZ.raw() / I2S_PIO_CLOCK_HZ.raw()) as u16;
 const I2S_PIO_CLOCKDIV_FRAC: u8 = 0u8;
 
@@ -76,10 +77,10 @@ fn synth_core(sys_freq: u32) -> ! {
     );
     let mut delay = cortex_m::delay::Delay::new(core.SYST, sys_freq);
 
-    let mclk_pin = pins.gpio8.into_function::<FunctionPio0>();
-    let i2s_send_data_pin = pins.gpio9.into_function::<FunctionPio0>();
-    let i2s_send_sclk_pin = pins.gpio10.into_function::<FunctionPio0>();
-    let i2s_send_lrclk_pin = pins.gpio11.into_function::<FunctionPio0>();
+    let i2s_sck_pin = pins.gpio8.into_function::<FunctionPio0>();
+    let i2s_din_pin = pins.gpio9.into_function::<FunctionPio0>();
+    let i2s_bck_pin = pins.gpio10.into_function::<FunctionPio0>();
+    let i2s_lck_pin = pins.gpio11.into_function::<FunctionPio0>();
 
     let pio_i2s_mclk_output = pio_file!("src/i2s.pio", select_program("mclk_output")).program;
     let pio_i2s_send_master = pio_file!("src/i2s.pio", select_program("i2s_send_master")).program;
@@ -89,13 +90,13 @@ fn synth_core(sys_freq: u32) -> ! {
     let pio_i2s_send_master = pio.install(&pio_i2s_send_master).unwrap();
 
     let (mut sm0, _rx0, _tx0) = PIOBuilder::from_program(pio_i2s_mclk_output)
-        .set_pins(mclk_pin.id().num, 1)
-        .clock_divisor_fixed_point(I2S_PIO_CLOCKDIV_INT, I2S_PIO_CLOCKDIV_FRAC)
+        .set_pins(i2s_sck_pin.id().num, 1)
+        .clock_divisor_fixed_point(5, 0)
         .build(sm0);
 
     let (mut sm1, _rx1, tx1) = PIOBuilder::from_program(pio_i2s_send_master)
-        .out_pins(i2s_send_data_pin.id().num, 1)
-        .side_set_pin_base(i2s_send_sclk_pin.id().num)
+        .out_pins(i2s_din_pin.id().num, 1)
+        .side_set_pin_base(i2s_bck_pin.id().num)
         .clock_divisor_fixed_point(I2S_PIO_CLOCKDIV_INT, I2S_PIO_CLOCKDIV_FRAC)
         .out_shift_direction(ShiftDirection::Left)
         .autopull(true)
@@ -103,18 +104,18 @@ fn synth_core(sys_freq: u32) -> ! {
         .buffers(Buffers::OnlyTx)
         .build(sm1);
 
-    sm0.set_pindirs([(mclk_pin.id().num, PinDir::Output)]);
+    sm0.set_pindirs([(i2s_sck_pin.id().num, PinDir::Output)]);
     sm0.start();
     sm1.set_pindirs([
-        (i2s_send_data_pin.id().num, PinDir::Output),
-        (i2s_send_lrclk_pin.id().num, PinDir::Output),
-        (i2s_send_sclk_pin.id().num, PinDir::Output),
+        (i2s_din_pin.id().num, PinDir::Output),
+        (i2s_lck_pin.id().num, PinDir::Output),
+        (i2s_bck_pin.id().num, PinDir::Output),
     ]);
     sm1.start();
 
     let dma_channels = pac.DMA.split(&mut pac.RESETS);
-    let i2s_tx_buf1 = singleton!(: [u32; BUFFER_SIZE*2] = [12345; BUFFER_SIZE*2]).unwrap();
-    let i2s_tx_buf2 = singleton!(: [u32; BUFFER_SIZE*2] = [123; BUFFER_SIZE*2]).unwrap();
+    let i2s_tx_buf1 = singleton!(: [u32; BUFFER_SIZE*2] = [0; BUFFER_SIZE*2]).unwrap();
+    let i2s_tx_buf2 = singleton!(: [u32; BUFFER_SIZE*2] = [0; BUFFER_SIZE*2]).unwrap();
     let i2s_dma_config =
         double_buffer::Config::new((dma_channels.ch0, dma_channels.ch1), i2s_tx_buf1, tx1);
     let i2s_tx_transfer = i2s_dma_config.start();
@@ -124,19 +125,25 @@ fn synth_core(sys_freq: u32) -> ! {
 
     info!("Start Synth core.");
 
-    let mut t: f64 = 0.;
-    let sample = |t| (t / 400.2272727) % 1.0;
+    let mut t: u32 = 0;
+    let mut sample = false;
 
     loop {
         let (next_tx_buf, next_tx_transfer) = i2s_tx_transfer.wait();
         for (i, e) in next_tx_buf.iter_mut().enumerate() {
             if i % 2 == 0 {
-                t += 1.;
-                *e = (sample(t) * u32::MAX as f64) as u32;
+                t += 1;
+                *e = if sample { u32::MAX - 1 } else { 1 };
             } else {
-                *e = (sample(t) * u32::MAX as f64) as u32;
+                *e = if sample { u32::MAX - 5 } else { 5 };
+            }
+
+            if t > 100 {
+                t = 0;
+                sample = !sample;
             }
         }
+
         // info!("t={} sample={} ", t, sample(t));
         i2s_tx_transfer = next_tx_transfer.read_next(next_tx_buf);
     }
