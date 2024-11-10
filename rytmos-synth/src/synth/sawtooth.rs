@@ -1,6 +1,6 @@
 use fixed::{
     traits::ToFixed,
-    types::{extra::U31, I12F20, I1F15, I1F31, U8F8},
+    types::{extra::U15, I1F15, U8F8},
     FixedI32, FixedI64,
 };
 
@@ -10,8 +10,8 @@ use super::{run_play_command, Synth, SAMPLE_RATE};
 
 pub struct SawtoothSynth {
     settings: SawtoothSynthSettings,
-    increment: I1F31, // Computed from frequency
-    sample: I1F31, // store the sample way more precise than needed so we can do more exact increments
+    increment: I1F15, // Computed from frequency
+    sample: I1F15, // store the sample way more precise than needed so we can do more exact increments
     velocity: U8F8,
     sample_counter: u32,
 }
@@ -21,15 +21,15 @@ impl SawtoothSynth {
         log::info!("Sawtooth Settings: {settings:?}");
         Self {
             settings,
-            increment: I1F31::from_num(0),
-            sample: I1F31::from_num(0),
+            increment: I1F15::from_num(0),
+            sample: I1F15::from_num(0),
             velocity: U8F8::from_num(0),
             sample_counter: 0,
         }
     }
 
     pub fn set_frequency(&mut self, frequency_in_hertz: f32) {
-        self.increment = I1F31::from_num(frequency_in_hertz / SAMPLE_RATE);
+        self.increment = I1F15::from_num(frequency_in_hertz / SAMPLE_RATE);
     }
 }
 
@@ -58,18 +58,16 @@ impl Synth for SawtoothSynth {
         self.sample = next_sample;
 
         // Apply gain
-        let out_sample = FixedI64::<U31>::from(next_sample)
-            .saturating_mul(FixedI64::<U31>::from(self.velocity))
-            .saturating_to_fixed::<I1F31>();
+        let out_sample = FixedI32::<U15>::from(next_sample)
+            .saturating_mul(FixedI32::<U15>::from(self.velocity))
+            .saturating_to_fixed::<I1F15>();
 
         if self.sample_counter == 1000 {
             self.sample_counter = 0;
             self.velocity *= self.settings.decay;
         }
 
-        let sample_msbs = out_sample.to_bits() >> 16;
-
-        I1F15::from_bits(sample_msbs as i16)
+        out_sample
     }
 
     fn run_command(&mut self, command: Command) {

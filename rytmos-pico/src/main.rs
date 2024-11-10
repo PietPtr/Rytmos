@@ -144,32 +144,41 @@ fn synth_core(sys_freq: u32) -> ! {
     info!("Start Synth core.");
 
     let mut synth = SawtoothSynth::new(SawtoothSynthSettings {
-        decay: U8F8::from_num(1.0),
+        decay: U8F8::from_num(0.9),
     });
 
     let mut sample = 0i16;
-    sample = 0x4bcd;
+
+    let mut warned = false;
+    let mut ran_command = false;
 
     loop {
+        ran_command = false;
         sio.fifo
             .read()
             .and_then(Command::deserialize)
             .inspect(|&command| {
                 trace!("Running Synth command: {}", command);
+                ran_command = true;
                 synth.run_command(command)
             });
 
-        if i2s_tx_transfer.is_done() {
+        if !warned && i2s_tx_transfer.is_done() {
             warn!("i2s transfer already done, probably late.");
+            warned = true;
+        }
+
+        if ran_command && i2s_tx_transfer.is_done() {
+            // warn!("i2s transfer already done, late caused by command.");
         }
 
         let (next_tx_buf, next_tx_transfer) = i2s_tx_transfer.wait();
         for (i, e) in next_tx_buf.iter_mut().enumerate() {
             if i % 2 == 0 {
-                // sample = synth.next().to_bits();
-                *e = sample as u32;
+                sample = synth.next().to_bits();
+                *e = sample as u32 / 2;
             } else {
-                *e = sample as u32;
+                *e = sample as u32 / 2;
             }
             *e <<= 16;
         }
@@ -326,18 +335,20 @@ fn main() -> ! {
         Command::Play(d!(4), U8F8::from_num(1.2)),
         Command::Play(e!(4), U8F8::from_num(1.3)),
         Command::Play(c!(4), U8F8::from_num(0.9)),
-        // Command::Play(c!(4), U8F8::from_num(0.)),
-        // Command::Play(c!(4), 155, 1),
-        // Command::Play(d!(4), 225, 1),
-        // Command::Play(e!(4), 240, 1),
-        // Command::Play(c!(4), 150, 2),
-        // Command::Play(c!(4), 0, 0),
-        // Command::Play(e!(4), 240, 1),
-        // Command::Play(f!(4), 240, 1),
-        // Command::Play(g!(4), 200, 1),
-        // Command::Play(g!(4), 200, 1),
-        // Command::Play(c!(4), 0, 0),
-        // Command::Play(c!(4), 0, 0),
+        Command::Play(c!(4), U8F8::from_num(0.)),
+        Command::Play(c!(4), U8F8::from_num(1.)),
+        Command::Play(d!(4), U8F8::from_num(1.)),
+        Command::Play(e!(4), U8F8::from_num(1.)),
+        Command::Play(c!(4), U8F8::from_num(1.)),
+        Command::Play(c!(4), U8F8::from_num(0.)),
+        Command::Play(e!(4), U8F8::from_num(1.)),
+        Command::Play(f!(4), U8F8::from_num(1.)),
+        Command::Play(g!(4), U8F8::from_num(1.)),
+        Command::Play(c!(4), U8F8::from_num(0.)),
+        Command::Play(e!(4), U8F8::from_num(1.)),
+        Command::Play(f!(4), U8F8::from_num(1.)),
+        Command::Play(g!(4), U8F8::from_num(1.)),
+        Command::Play(c!(4), U8F8::from_num(0.)),
     ]
     .into_iter()
     .cycle();
