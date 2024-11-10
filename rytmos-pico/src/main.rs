@@ -40,7 +40,10 @@ use rp_pico::{
         Timer,
     },
 };
+use rytmos_engrave::a;
 use rytmos_scribe::sixteen_switches::SwitchState;
+use rytmos_synth::synth::sine::SineSynth;
+use rytmos_synth::synth::sine::SineSynthSettings;
 use rytmos_ui::interface::PlayingButtons;
 use rytmos_ui::interface::{IOState, Interface};
 use sh1106::{prelude::*, Builder};
@@ -56,13 +59,17 @@ const EXTERNAL_XTAL_FREQ_HZ: HertzU32 = HertzU32::from_raw(12_000_000u32);
 const RP2040_CLOCK_HZ: HertzU32 = HertzU32::from_raw(307_200_000u32);
 
 // TODO: these settings result in 40kHz, not 48kHz.
-const SAMPLE_RATE: HertzU32 = HertzU32::from_raw(48_000u32);
-const PIO_INSTRUCTIONS_PER_SAMPLE: u32 = 5;
+const SAMPLE_RATE: HertzU32 = HertzU32::from_raw(44_100u32);
+const PIO_INSTRUCTIONS_PER_SAMPLE: u32 = 2;
+const NUM_CHANNELS: u32 = 2;
+const SAMPLE_RESOLUTION: u32 = 16; // in bits per sample
 
-const I2S_PIO_CLOCK_HZ: HertzU32 =
-    HertzU32::from_raw(SAMPLE_RATE.raw() * 64u32 * PIO_INSTRUCTIONS_PER_SAMPLE);
+const I2S_PIO_CLOCK_HZ: HertzU32 = HertzU32::from_raw(
+    SAMPLE_RATE.raw() * NUM_CHANNELS * SAMPLE_RESOLUTION * PIO_INSTRUCTIONS_PER_SAMPLE,
+);
 const I2S_PIO_CLOCKDIV_INT: u16 = (RP2040_CLOCK_HZ.raw() / I2S_PIO_CLOCK_HZ.raw()) as u16;
-const I2S_PIO_CLOCKDIV_FRAC: u8 = 0;
+const I2S_PIO_CLOCKDIV_FRAC: u8 =
+    (((RP2040_CLOCK_HZ.raw() % I2S_PIO_CLOCK_HZ.raw()) * 256) / I2S_PIO_CLOCK_HZ.raw()) as u8;
 
 const BUFFER_SIZE: usize = 16;
 
@@ -86,7 +93,7 @@ fn synth_core(sys_freq: u32) -> ! {
     let i2s_lck_pin = pins.gpio11.into_function::<FunctionPio0>();
 
     let pio_i2s_mclk_output = pio_file!("src/i2s.pio", select_program("mclk_output")).program;
-    let pio_i2s_send_master = pio_file!("src/i2s.pio", select_program("i2s_send_master")).program;
+    let pio_i2s_send_master = pio_file!("src/i2s.pio", select_program("i2s_out_master")).program;
 
     let (mut pio, sm0, sm1, _, _) = pac.PIO0.split(&mut pac.RESETS);
     let pio_i2s_mclk_output = pio.install(&pio_i2s_mclk_output).unwrap();
@@ -94,7 +101,7 @@ fn synth_core(sys_freq: u32) -> ! {
 
     let (mut sm0, _rx0, _tx0) = PIOBuilder::from_program(pio_i2s_mclk_output)
         .set_pins(i2s_sck_pin.id().num, 1)
-        .clock_divisor_fixed_point(5, 0)
+        .clock_divisor_fixed_point(13, 155) // TODO: hardcoded, should give a clock at LRCLK frequency * 256
         .build(sm0);
 
     let (mut sm1, _rx1, tx1) = PIOBuilder::from_program(pio_i2s_send_master)
@@ -103,7 +110,7 @@ fn synth_core(sys_freq: u32) -> ! {
         .clock_divisor_fixed_point(I2S_PIO_CLOCKDIV_INT, I2S_PIO_CLOCKDIV_FRAC)
         .out_shift_direction(ShiftDirection::Left)
         .autopull(true)
-        .pull_threshold(32u8)
+        .pull_threshold(16u8)
         .buffers(Buffers::OnlyTx)
         .build(sm1);
 
@@ -127,27 +134,43 @@ fn synth_core(sys_freq: u32) -> ! {
     delay.delay_ms(100);
 
     info!("Start Synth core.");
+    info!("I2S_PIO_CLOCKDIV_INT = {:?}", I2S_PIO_CLOCKDIV_INT);
+    info!("I2S_PIO_CLOCKDIV_FRAC = {:?}", I2S_PIO_CLOCKDIV_FRAC);
 
-    let mut t: u32 = 0;
-    let mut sample = false;
+    let mut t: i32 = 0;
+    let mut sample = 0;
+    let samples = [
+        i16::MAX,
+        i16::MAX / 2,
+        i16::MIN / 2,
+        i16::MIN,
+        i16::MIN / 2,
+        i16::MAX / 2,
+    ];
+    let mut sample_iter = samples.iter().cycle();
+
+    // TODO: build very fast sawtooth synth and test that here
+    let mut synth = SineSynth::new(SineSynthSettings {
+        attack_gain: i16::MAX as f32,
+        initial_phase: 0.0,
+        decay_per_second: 0.0,
+    });
+
+    synth.play(a!(2), 1000.0);
+    let mut sample = 0i16;
 
     loop {
         let (next_tx_buf, next_tx_transfer) = i2s_tx_transfer.wait();
         for (i, e) in next_tx_buf.iter_mut().enumerate() {
             if i % 2 == 0 {
-                t += 1;
-                *e = if sample { u32::MAX - 1 } else { 1 };
+                sample = synth.next();
+                *e = sample as u32;
             } else {
-                *e = if sample { u32::MAX - 5 } else { 5 };
+                *e = sample as u32;
             }
-
-            if t > 200 {
-                t = 0;
-                sample = !sample;
-            }
+            *e <<= 16;
         }
 
-        // info!("t={} sample={} ", t, sample(t));
         i2s_tx_transfer = next_tx_transfer.read_next(next_tx_buf);
     }
 

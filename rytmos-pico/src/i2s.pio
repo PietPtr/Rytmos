@@ -10,8 +10,8 @@
 .program mclk_output
 
 .wrap_target
-    set pins, 0b1 [2]
-    set pins, 0b0 [1]
+    set pins, 0b1
+    set pins, 0b0
 .wrap
 
 ; I2S send Master
@@ -23,52 +23,36 @@
 ; fs=48kHzのときは、sysClk: 76.8MHz or 153.6MHz or 230.4MHz or 384MHzにすると整数にできる。
 ; fs=96kHzのときは、sysClk: 153.6MHz or 307.2MHzにすると整数にできる。
 
-.program i2s_send_master
+
+.program i2s_out_master
+; I2S audio output block. Synchronous with clock and input.
+; Must run at BCK * 2.
+;
+; This block also outputs the word clock (also called frame or LR clock) and
+; the bit clock.
+;
+; Set register x to (bit depth - 2) (e.g. for 24 bit audio, set to 22).
+; Note that if this is needed to be synchronous with the SCK module,
+; it is not possible to run 24-bit frames with an SCK of 256x fs. You must either
+; run SCK at 384x fs (if your codec permits this) or use 32-bit frames, which
+; work fine with 24-bit codecs.
+
 .side_set 2
 
-            ;                  /----LRCLK
-            ;                  |/---BCLK    
-.wrap_target    
-    set y, 30 [2]       side 0b01
-loopLch:
-    out pins, 1 [2]     side 0b00;MSBからLSBの1つ前まで
-    jmp y-- loopLch [2] side 0b01
-    out pins, 1 [2]     side 0b10;LSB
-    set y, 30 [2]       side 0b11
-loopRch:
-    out pins, 1 [2]     side 0b10;MSBからLSBの1つ前まで
-    jmp y-- loopRch [2] side 0b11
-    out pins, 1 [2]     side 0b00;LSB
-.wrap
-
-; I2S receive
-; Master
-; fs: 48kHz
-; sysClk: 153.6MHz
-; PIO Clock freq: 15.36MHz (320fs)
-; Bit depth: 32bit
-; Akiyuki Okayasu
-
-.program i2s_receive_master
-.side_set 2
-
-            ;                  /----LRCLK
-            ;                  |/---BCLK            
 .wrap_target
-    set y, 30 [1]       side 0b00
-loopLch:
-    nop                 side 0b01;in命令の前に1clock分マージンを入れる
-    in pins, 1          side 0b01;MSBからLSBの1つ前まで
-    jmp y-- loopLch [2] side 0b00
-    nop                 side 0b11;in命令の前に1clock分マージンを入れる
-    in pins, 1          side 0b11;LSB
-    push                side 0b10
-    set y, 30 [1]       side 0b10
-loopRch:
-    nop                 side 0b11;in命令の前に1clock分マージンを入れる
-    in pins, 1          side 0b11;MSBからLSBの1つ前まで
-    jmp y-- loopRch [2] side 0b10
-    nop                 side 0b01;in命令の前に1clock分マージンを入れる
-    in pins, 1          side 0b01;LSB
-    push                side 0b00
+                    ;        /--- LRCLK
+                    ;        |/-- BCLK
+frameL:             ;        ||
+    set x, 14         side 0b00 ; start of Left frame
+    pull noblock      side 0b01 ; One clock after edge change with no data
+dataL:
+    out pins, 1       side 0b00
+    jmp x-- dataL     side 0b01
+
+frameR:
+    set x, 14         side 0b10
+    pull noblock      side 0b11 ; One clock after edge change with no data
+dataR:
+    out pins, 1       side 0b10
+    jmp x-- dataR     side 0b11
 .wrap

@@ -1,3 +1,5 @@
+use log::info;
+
 use crate::{commands::Command, wavetables::SINE_WAVE};
 
 use super::{run_play_command, Synth, SAMPLE_RATE};
