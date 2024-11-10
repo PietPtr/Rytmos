@@ -1,12 +1,13 @@
+use fixed::types::U8F8;
 use rytmos_engrave::staff::{Accidental, Note};
 
 /// Commands for synths that can be serialized in a u32 so the fit in a Pico's FIFO.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Command {
-    /// Note and velocity (encoded as a (velocity / 256) * scale)
-    Play(Note, u8, u8),
+    /// Note and velocity
+    Play(Note, U8F8),
     /// Define default attack?
-    SetAttack(u8, u8), // TODO: make something more ergonomic for this u8, u8 fixed point type
+    SetAttack(U8F8),
     /// Play the tick of a metronome, with emphasis or not
     Tick(bool),
     /// Set the tempo of the synth in _sixteenths_ per minute (whatever that means for a synth)
@@ -16,7 +17,7 @@ pub enum Command {
 impl Command {
     pub fn serialize(&self) -> u32 {
         match *self {
-            Command::Play(note, velocity, scale) => {
+            Command::Play(note, velocity) => {
                 let command_id = 0b000000;
                 let (note_bits, acc, octave) = match note {
                     Note::A(acc, octave) => (0, acc, octave),
@@ -38,16 +39,15 @@ impl Command {
 
                 let octave_bits = (octave & 0b1111) as u32;
 
-                (velocity as u32)
-                    | ((scale as u32) << 8)
+                (velocity.to_bits() as u32)
                     | (note_bits << 16)
                     | (acc_bits << 19)
                     | (octave_bits << 22)
                     | (command_id << 26)
             }
-            Command::SetAttack(attack, scale) => {
+            Command::SetAttack(attack) => {
                 let command_id = 0b00001;
-                (attack as u32) | ((scale as u32) << 8) | (command_id << 26)
+                (attack.to_bits() as u32) | (command_id << 26)
             }
             Command::Tick(emphasis) => {
                 let command_id = 0b00010;
@@ -68,8 +68,7 @@ impl Command {
 
         match command_id {
             0 => {
-                let velocity = value & 0xFF;
-                let scale = (value >> 8) & 0xFF;
+                let velocity = value & 0xFFFF;
                 let note_bits = (value >> 16) & 0x7;
                 let acc_bits = (value >> 19) & 0x7;
                 let octave_bits = (value >> 22) & 0x3FF;
@@ -96,14 +95,13 @@ impl Command {
                     _ => return None,
                 };
 
-                Some(Self::Play(note, velocity as u8, scale as u8))
+                Some(Self::Play(note, U8F8::from_bits(velocity as u16)))
             }
             1 => {
-                let attack = value as u8;
-                let scale = (value >> 8) as u8;
+                let attack = U8F8::from_bits(value as u16);
                 let reserved = value & 0b00000011_11111111_00000000_00000000;
                 if reserved == 0 {
-                    Some(Self::SetAttack(attack, scale))
+                    Some(Self::SetAttack(attack))
                 } else {
                     None
                 }
@@ -130,3 +128,5 @@ impl Command {
         }
     }
 }
+
+// TODO: scope module / crate for testing synths on the go?

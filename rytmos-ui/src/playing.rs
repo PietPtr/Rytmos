@@ -1,3 +1,4 @@
+use fixed::types::U8F8;
 use rytmos_engrave::{c, staff::Note};
 use rytmos_synth::commands::Command;
 
@@ -111,11 +112,11 @@ impl ActionToCommand for ChromaticActionToCommand {
         };
 
         let velocity = if play_action == PlayAction::Mute {
-            0
+            U8F8::from_num(0.)
         } else {
-            255
+            U8F8::from_num(1.)
         };
 
-        Some(Command::Play(note, velocity, 1))
+        Some(Command::Play(note, velocity))
     }
 }

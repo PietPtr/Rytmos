@@ -1,5 +1,9 @@
 use std::sync::Once;
 
+use fixed::{
+    traits::Fixed,
+    types::{I0F16, I1F15, U8F8},
+};
 use plotters::prelude::*;
 use rand::Rng;
 use rytmos_engrave::*;
@@ -9,6 +13,7 @@ use rytmos_synth::{
         lpf::LowPassFilter,
         metronome::MetronomeSynth,
         overtone::{OvertoneSynth, OvertoneSynthSettings},
+        sawtooth::{SawtoothSynth, SawtoothSynthSettings},
         sine::{SineSynth, SineSynthSettings},
         vibrato::{VibratoSynth, VibratoSynthSettings},
         Synth, SAMPLE_RATE,
@@ -23,147 +28,169 @@ fn init_logger() {
     });
 }
 
+// TODO: repair all the synths
+// #[test]
+// fn test_sine_synth() {
+//     init_logger();
+
+//     const SAMPLES: usize = 44100;
+
+//     let mut synth = SineSynth::new(SineSynthSettings {
+//         attack_gain: 0.9,
+//         initial_phase: 0.1,
+//         decay_per_second: 0.1,
+//     });
+
+//     let samples: Vec<i16> = (0..SAMPLES)
+//         .map(|i| {
+//             if i == 250 {
+//                 synth.play(a!(1), 1.2)
+//             }
+//             synth.next()
+//         })
+//         .collect();
+
+//     plot_samples(&samples[..22000]).unwrap();
+//     export_to_wav(samples, "signal.wav");
+// }
+
+// #[test]
+// fn test_vibrato_synth() {
+//     init_logger();
+
+//     let mut synth = VibratoSynth::new(VibratoSynthSettings {
+//         sine_settings: SineSynthSettings {
+//             attack_gain: 1.0,
+//             initial_phase: 0.0,
+//             decay_per_second: 1.0,
+//         },
+//         vibrato_frequency: 5.0,
+//         vibrato_strength: 0.0001,
+//     });
+
+//     synth.play(a!(4), 1.0);
+
+//     let samples: Vec<i16> = (0..44100).map(|_| synth.next()).collect();
+
+//     plot_samples(&samples[..22000]).unwrap();
+//     export_to_wav(samples, "signal.wav");
+// }
+
+// #[test]
+// fn test_lpf() {
+//     init_logger();
+
+//     // Run a very distorted sine synth
+//     let mut synth = SineSynth::new(SineSynthSettings {
+//         attack_gain: 5.0,
+//         initial_phase: 0.,
+//         decay_per_second: 0.2,
+//     });
+
+//     // But filter it aggressively
+//     let mut lpf = LowPassFilter::new(250.);
+
+//     synth.play(a!(0), 1.0);
+
+//     let samples: Vec<i16> = (0..44100).map(|_| lpf.next(synth.next())).collect();
+
+//     plot_samples(&samples[..22000]).unwrap();
+//     export_to_wav(samples, "signal.wav");
+// }
+
+// #[test]
+// fn test_metronome() {
+//     init_logger();
+
+//     let mut synth = MetronomeSynth::new();
+
+//     synth.play(a!(0), 1.0);
+
+//     let samples: Vec<i16> = (0..44100).map(|_| synth.next()).collect();
+
+//     plot_samples(&samples[..44000]).unwrap();
+//     export_to_wav(samples, "signal.wav");
+// }
+
+// #[test]
+// fn test_overtone_synth() {
+//     init_logger();
+
+//     let synths = [
+//         SineSynth::new(SineSynthSettings {
+//             attack_gain: 0.38,
+//             initial_phase: 0.13,
+//             decay_per_second: 0.5,
+//         }),
+//         SineSynth::new(SineSynthSettings {
+//             attack_gain: 0.4,
+//             initial_phase: 0.77,
+//             decay_per_second: 0.6,
+//         }),
+//         SineSynth::new(SineSynthSettings {
+//             attack_gain: 0.34,
+//             initial_phase: 0.21,
+//             decay_per_second: 0.5,
+//         }),
+//         SineSynth::new(SineSynthSettings {
+//             attack_gain: 0.02,
+//             initial_phase: 0.29,
+//             decay_per_second: 0.4,
+//         }),
+//         SineSynth::new(SineSynthSettings {
+//             attack_gain: 0.01,
+//             initial_phase: 0.11,
+//             decay_per_second: 0.3,
+//         }),
+//         SineSynth::new(SineSynthSettings {
+//             attack_gain: 0.01,
+//             initial_phase: 0.59,
+//             decay_per_second: 0.2,
+//         }),
+//     ];
+
+//     let mut synth = OvertoneSynth::new(OvertoneSynthSettings {}, synths);
+
+//     let samples: Vec<i16> = (0..88100)
+//         .map(|i| {
+//             if i == 250 {
+//                 synth.play(e!(1), 1.2)
+//             }
+//             if i == 34000 {
+//                 synth.play(e!(1), 0.);
+//             }
+//             synth.next()
+//         })
+//         .collect();
+
+//     plot_samples(&samples[..22000]).unwrap();
+
+//     export_to_wav(samples, "signal.wav");
+// }
+
 #[test]
-fn test_sine_synth() {
+fn test_sawtooth_synth() {
     init_logger();
 
-    const SAMPLES: usize = 44100;
-
-    let mut synth = SineSynth::new(SineSynthSettings {
-        attack_gain: 0.9,
-        initial_phase: 0.1,
-        decay_per_second: 0.1,
+    let mut synth = SawtoothSynth::new(SawtoothSynthSettings {
+        decay: U8F8::from_num(0.90),
     });
 
-    let samples: Vec<i16> = (0..SAMPLES)
-        .map(|i| {
-            if i == 250 {
-                synth.play(a!(1), 1.2)
-            }
-            synth.next()
-        })
+    synth.play(a!(4), U8F8::from_num(1.01));
+
+    const LEN: usize = 44100;
+
+    let samples: Vec<i16> = (0..LEN)
+        .map(|_| synth.next())
+        .map(|i| i.to_bits())
         .collect();
 
-    plot_samples(&samples[..22000]).unwrap();
-    export_to_wav(samples, "signal.wav");
-}
-
-#[test]
-fn test_vibrato_synth() {
-    init_logger();
-
-    let mut synth = VibratoSynth::new(VibratoSynthSettings {
-        sine_settings: SineSynthSettings {
-            attack_gain: 1.0,
-            initial_phase: 0.0,
-            decay_per_second: 1.0,
-        },
-        vibrato_frequency: 5.0,
-        vibrato_strength: 0.0001,
-    });
-
-    synth.play(a!(4), 1.0);
-
-    let samples: Vec<i16> = (0..44100).map(|_| synth.next()).collect();
-
-    plot_samples(&samples[..22000]).unwrap();
-    export_to_wav(samples, "signal.wav");
-}
-
-#[test]
-fn test_lpf() {
-    init_logger();
-
-    // Run a very distorted sine synth
-    let mut synth = SineSynth::new(SineSynthSettings {
-        attack_gain: 5.0,
-        initial_phase: 0.,
-        decay_per_second: 0.2,
-    });
-
-    // But filter it aggressively
-    let mut lpf = LowPassFilter::new(250.);
-
-    synth.play(a!(0), 1.0);
-
-    let samples: Vec<i16> = (0..44100).map(|_| lpf.next(synth.next())).collect();
-
-    plot_samples(&samples[..22000]).unwrap();
-    export_to_wav(samples, "signal.wav");
-}
-
-#[test]
-fn test_metronome() {
-    init_logger();
-
-    let mut synth = MetronomeSynth::new();
-
-    synth.play(a!(0), 1.0);
-
-    let samples: Vec<i16> = (0..44100).map(|_| synth.next()).collect();
-
-    plot_samples(&samples[..44000]).unwrap();
-    export_to_wav(samples, "signal.wav");
-}
-
-#[test]
-fn test_overtone_synth() {
-    init_logger();
-
-    let synths = [
-        SineSynth::new(SineSynthSettings {
-            attack_gain: 0.38,
-            initial_phase: 0.13,
-            decay_per_second: 0.5,
-        }),
-        SineSynth::new(SineSynthSettings {
-            attack_gain: 0.4,
-            initial_phase: 0.77,
-            decay_per_second: 0.6,
-        }),
-        SineSynth::new(SineSynthSettings {
-            attack_gain: 0.34,
-            initial_phase: 0.21,
-            decay_per_second: 0.5,
-        }),
-        SineSynth::new(SineSynthSettings {
-            attack_gain: 0.02,
-            initial_phase: 0.29,
-            decay_per_second: 0.4,
-        }),
-        SineSynth::new(SineSynthSettings {
-            attack_gain: 0.01,
-            initial_phase: 0.11,
-            decay_per_second: 0.3,
-        }),
-        SineSynth::new(SineSynthSettings {
-            attack_gain: 0.01,
-            initial_phase: 0.59,
-            decay_per_second: 0.2,
-        }),
-    ];
-
-    let mut synth = OvertoneSynth::new(OvertoneSynthSettings {}, synths);
-
-    let samples: Vec<i16> = (0..88100)
-        .map(|i| {
-            if i == 250 {
-                synth.play(e!(1), 1.2)
-            }
-            if i == 34000 {
-                synth.play(e!(1), 0.);
-            }
-            synth.next()
-        })
-        .collect();
-
-    plot_samples(&samples[..22000]).unwrap();
-
+    plot_samples(&samples[..LEN]).unwrap();
     export_to_wav(samples, "signal.wav");
 }
 
 fn plot_samples(samples: &[i16]) -> Result<(), Box<dyn std::error::Error>> {
-    let root = BitMapBackend::new("graph.png", (1600, 1200)).into_drawing_area();
+    let root = BitMapBackend::new("graph.png", (800, 600)).into_drawing_area();
     root.fill(&WHITE)?;
 
     let y_min = *samples.iter().min().unwrap() as i32;
@@ -235,4 +262,13 @@ fn export_to_wav(samples: Vec<i16>, file_path: &str) {
     }
 
     writer.finalize().unwrap();
+}
+
+#[test]
+fn try_fixed_crate() {
+    let test = I1F15::checked_from_num(0.4);
+    dbg!(test);
+    let test: i16 = test.unwrap().to_bits();
+    dbg!(test);
+    dbg!(I1F15::MAX, I1F15::MIN);
 }

@@ -14,6 +14,7 @@ use cortex_m::{interrupt::Mutex, singleton};
 use defmt::*;
 use defmt_rtt as _;
 use embedded_hal::digital::v2::OutputPin;
+use fixed::types::U8F8;
 use fugit::Duration;
 use fugit::HertzU32;
 use fugit::RateExtU32;
@@ -41,7 +42,14 @@ use rp_pico::{
     },
 };
 use rytmos_engrave::a;
+use rytmos_engrave::c;
+use rytmos_engrave::d;
+use rytmos_engrave::e;
+use rytmos_engrave::f;
+use rytmos_engrave::g;
 use rytmos_scribe::sixteen_switches::SwitchState;
+use rytmos_synth::synth::sawtooth::SawtoothSynth;
+use rytmos_synth::synth::sawtooth::SawtoothSynthSettings;
 use rytmos_synth::synth::sine::SineSynth;
 use rytmos_synth::synth::sine::SineSynthSettings;
 use rytmos_ui::interface::PlayingButtons;
@@ -134,36 +142,31 @@ fn synth_core(sys_freq: u32) -> ! {
     delay.delay_ms(100);
 
     info!("Start Synth core.");
-    info!("I2S_PIO_CLOCKDIV_INT = {:?}", I2S_PIO_CLOCKDIV_INT);
-    info!("I2S_PIO_CLOCKDIV_FRAC = {:?}", I2S_PIO_CLOCKDIV_FRAC);
 
-    let mut t: i32 = 0;
-    let mut sample = 0;
-    let samples = [
-        i16::MAX,
-        i16::MAX / 2,
-        i16::MIN / 2,
-        i16::MIN,
-        i16::MIN / 2,
-        i16::MAX / 2,
-    ];
-    let mut sample_iter = samples.iter().cycle();
-
-    // TODO: build very fast sawtooth synth and test that here
-    let mut synth = SineSynth::new(SineSynthSettings {
-        attack_gain: i16::MAX as f32,
-        initial_phase: 0.0,
-        decay_per_second: 0.0,
+    let mut synth = SawtoothSynth::new(SawtoothSynthSettings {
+        decay: U8F8::from_num(1.0),
     });
 
-    synth.play(a!(2), 1000.0);
     let mut sample = 0i16;
+    sample = 0x4bcd;
 
     loop {
+        sio.fifo
+            .read()
+            .and_then(Command::deserialize)
+            .inspect(|&command| {
+                trace!("Running Synth command: {}", command);
+                synth.run_command(command)
+            });
+
+        if i2s_tx_transfer.is_done() {
+            warn!("i2s transfer already done, probably late.");
+        }
+
         let (next_tx_buf, next_tx_transfer) = i2s_tx_transfer.wait();
         for (i, e) in next_tx_buf.iter_mut().enumerate() {
             if i % 2 == 0 {
-                sample = synth.next();
+                // sample = synth.next().to_bits();
                 *e = sample as u32;
             } else {
                 *e = sample as u32;
@@ -172,27 +175,6 @@ fn synth_core(sys_freq: u32) -> ! {
         }
 
         i2s_tx_transfer = next_tx_transfer.read_next(next_tx_buf);
-    }
-
-    let mut synth = OvertoneAndMetronomeSynth::new();
-
-    loop {
-        sio.fifo
-            .read()
-            .and_then(Command::deserialize)
-            .inspect(|&command| synth.run_command(command));
-
-        if i2s_tx_transfer.is_done() {
-            let (next_tx_buf, next_tx_transfer) = i2s_tx_transfer.wait();
-
-            let sample = synth.next(); // TODO: i16 vs u32??
-
-            for e in next_tx_buf.iter_mut() {
-                *e = sample as u32;
-            }
-
-            i2s_tx_transfer = next_tx_transfer.read_next(next_tx_buf);
-        }
     }
 }
 
@@ -338,6 +320,40 @@ fn main() -> ! {
     display.flush().unwrap();
 
     let mut interface = Interface::new();
+
+    let mut commands = [
+        Command::Play(c!(4), U8F8::from_num(1.)),
+        Command::Play(d!(4), U8F8::from_num(1.2)),
+        Command::Play(e!(4), U8F8::from_num(1.3)),
+        Command::Play(c!(4), U8F8::from_num(0.9)),
+        // Command::Play(c!(4), U8F8::from_num(0.)),
+        // Command::Play(c!(4), 155, 1),
+        // Command::Play(d!(4), 225, 1),
+        // Command::Play(e!(4), 240, 1),
+        // Command::Play(c!(4), 150, 2),
+        // Command::Play(c!(4), 0, 0),
+        // Command::Play(e!(4), 240, 1),
+        // Command::Play(f!(4), 240, 1),
+        // Command::Play(g!(4), 200, 1),
+        // Command::Play(g!(4), 200, 1),
+        // Command::Play(c!(4), 0, 0),
+        // Command::Play(c!(4), 0, 0),
+    ]
+    .into_iter()
+    .cycle();
+
+    loop {
+        delay.delay_ms(700);
+
+        let command = commands.next().unwrap();
+        let command_serialized = command.serialize();
+
+        cortex_m::interrupt::free(|cs| {
+            let mut fifo = FIFO.borrow(cs).take().unwrap();
+            fifo.write(command_serialized);
+            FIFO.borrow(cs).replace(Some(fifo));
+        });
+    }
 
     loop {
         // TODO: write lib that reads all the connected IO.

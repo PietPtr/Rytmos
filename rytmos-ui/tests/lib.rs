@@ -1,5 +1,6 @@
 use std::sync::Once;
 
+use fixed::types::U8F8;
 use rytmos_engrave::{
     a, cis, dis,
     staff::{Duration, Music},
@@ -39,7 +40,7 @@ fn test_command_for_time() {
 
     // Test different time values
     let _test_cases = vec![
-        (0, Some(Command::Play(a!(3), 255, 1))),
+        (0, Some(Command::Play(a!(3), U8F8::from_num(1.)))),
         (1, None),
         (2, None),
         (3, None),
@@ -47,11 +48,11 @@ fn test_command_for_time() {
         (5, None),
         (6, None),
         (7, None),
-        (32, Some(Command::Play(cis!(4), 255, 1))),
+        (32, Some(Command::Play(cis!(4), U8F8::from_num(1.)))),
         (33, None),
         (40, None),
         (45, None),
-        (48, Some(Command::Play(dis!(4), 255, 1))),
+        (48, Some(Command::Play(dis!(4), U8F8::from_num(1.)))),
     ];
 
     println!("----");

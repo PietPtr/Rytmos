@@ -5,6 +5,7 @@ edition = "2021"
 description = "User interfaces for practicing using rytmos-scribe, engrave, synth"
 
 [dependencies]
+fixed = "1.27.0"
 libm = "0.2.8"
 log = "0.4.22"
 rytmos-symbols = { path = "../rytmos-symbols" }

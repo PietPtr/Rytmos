@@ -950,7 +950,7 @@ impl Duration {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, defmt::Format)]
 pub enum Accidental {
     Natural,
     Sharp,
@@ -960,7 +960,7 @@ pub enum Accidental {
 }
 
 // TODO: move to a rytmos-common crate?
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, defmt::Format)]
 pub enum Note {
     A(Accidental, i32),
     B(Accidental, i32),

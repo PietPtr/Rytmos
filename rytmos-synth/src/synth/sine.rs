@@ -1,4 +1,5 @@
-use log::info;
+use fixed::types::{I1F15, U8F8};
+use log::*;
 
 use crate::{commands::Command, wavetables::SINE_WAVE};
 
@@ -44,7 +45,7 @@ impl SineSynth {
 
 #[derive(Clone, Copy, Debug)]
 pub struct SineSynthSettings {
-    pub attack_gain: f32,
+    pub attack_gain: U8F8,
     pub initial_phase: f32,
     pub decay_per_second: f32,
 }
@@ -56,46 +57,47 @@ impl Synth for SineSynth {
         self.settings = settings
     }
 
-    fn play(&mut self, note: rytmos_engrave::staff::Note, velocity: f32) {
+    fn play(&mut self, note: rytmos_engrave::staff::Note, velocity: U8F8) {
         self.frequency = note.frequency();
-        self.gain = velocity * self.settings.attack_gain;
+        // self.gain = velocity * self.settings.attack_gain;
     }
 
-    fn next(&mut self) -> i16 {
-        let table_size = SINE_WAVE.len() as f32;
+    fn next(&mut self) -> I1F15 {
+        todo!()
+        // let table_size = SINE_WAVE.len() as f32;
 
-        let (sign, flip_index) = match self.phase {
-            p if (0.00..0.25).contains(&p) => (1, false),
-            p if (0.25..0.50).contains(&p) => (1, true),
-            p if (0.50..0.75).contains(&p) => (-1, false),
-            p if (0.75..1.00).contains(&p) => (-1, true),
-            p => panic!("Impossible phase: {}", p),
-        };
+        // let (sign, flip_index) = match self.phase {
+        //     p if (0.00..0.25).contains(&p) => (1, false),
+        //     p if (0.25..0.50).contains(&p) => (1, true),
+        //     p if (0.50..0.75).contains(&p) => (-1, false),
+        //     p if (0.75..1.00).contains(&p) => (-1, true),
+        //     p => panic!("Impossible phase: {}", p),
+        // };
 
-        let idx_in_part = (4. * (libm::modff(self.phase).0 % 0.25)) * (table_size - 1.0);
-        let idx_float = if flip_index {
-            table_size - 1.0 - idx_in_part
-        } else {
-            idx_in_part
-        };
+        // let idx_in_part = (4. * (libm::modff(self.phase).0 % 0.25)) * (table_size - 1.0);
+        // let idx_float = if flip_index {
+        //     table_size - 1.0 - idx_in_part
+        // } else {
+        //     idx_in_part
+        // };
 
-        let idx = libm::roundf(idx_float as f32) as usize;
-        let next_idx = match (idx, flip_index) {
-            (0, _) => 1,
-            (idx, _) if idx == SINE_WAVE.len() - 1 => idx - 1,
-            (idx, _) => idx + 1,
-        };
+        // let idx = libm::roundf(idx_float as f32) as usize;
+        // let next_idx = match (idx, flip_index) {
+        //     (0, _) => 1,
+        //     (idx, _) if idx == SINE_WAVE.len() - 1 => idx - 1,
+        //     (idx, _) => idx + 1,
+        // };
 
-        let a = SINE_WAVE[idx];
-        let b = SINE_WAVE[next_idx];
-        let t = idx_float - idx as f32;
+        // let a = SINE_WAVE[idx];
+        // let b = SINE_WAVE[next_idx];
+        // let t = idx_float - idx as f32;
 
-        let sample = (Self::lerp(a, b, t) * self.gain) as i16 * sign;
+        // let sample = (Self::lerp(a, b, t) * self.gain) as i16 * sign;
 
-        self.phase = (self.phase + self.phase_inc()) % 1.0;
-        self.gain *= self.decay();
+        // self.phase = (self.phase + self.phase_inc()) % 1.0;
+        // self.gain *= self.decay();
 
-        sample
+        // sample
     }
 
     fn run_command(&mut self, command: Command) {
@@ -103,9 +105,7 @@ impl Synth for SineSynth {
 
         #[allow(clippy::single_match)]
         match command {
-            Command::SetAttack(attack, scale) => {
-                self.settings.attack_gain = (attack as u32 * 256) as f32 * scale as f32
-            }
+            Command::SetAttack(attack) => self.settings.attack_gain = attack,
             _ => (),
         }
     }

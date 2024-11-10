@@ -1,3 +1,4 @@
+use fixed::types::{I1F15, U8F8};
 use rytmos_engrave::staff::Note;
 
 use crate::commands::Command;
@@ -25,16 +26,17 @@ impl<S: Synth, const N: usize> Synth for OvertoneSynth<S, N> {
         self.settings = settings
     }
 
-    fn play(&mut self, mut note: Note, velocity: f32) {
+    fn play(&mut self, mut note: Note, velocity: U8F8) {
         for (i, synth) in self.synths.iter_mut().enumerate() {
             synth.play(note.map_octave(|n| n + i as i32), velocity)
         }
     }
 
-    fn next(&mut self) -> i16 {
-        self.synths
-            .iter_mut()
-            .fold(0, |acc, synth| acc.saturating_add(synth.next()))
+    fn next(&mut self) -> I1F15 {
+        todo!()
+        // self.synths
+        //     .iter_mut()
+        //     .fold(0, |acc, synth| acc.saturating_add(synth.next()))
     }
 
     fn run_command(&mut self, command: Command) {

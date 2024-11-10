@@ -632,6 +632,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "fixed"
+version = "1.27.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2fc715d38bea7b5bf487fcd79bcf8c209f0b58014f3018a7a19c2b855f472048"
+dependencies = [
+ "az",
+ "bytemuck",
+ "half",
+ "typenum",
+]
+
+[[package]]
 name = "fixedbitset"
 version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -808,6 +820,16 @@ checksum = "80792593675e051cf94a4b111980da2ba60d4a83e43e0048c5693baab3977045"
 dependencies = [
  "color_quant",
  "weezl",
+]
+
+[[package]]
+name = "half"
+version = "2.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6dd08c532ae367adf81c312a4580bc67f1d0fe8bc9c460520283f4c0ff277888"
+dependencies = [
+ "cfg-if",
+ "crunchy",
 ]
 
 [[package]]
@@ -1696,6 +1718,7 @@ checksum = "955d28af4278de8121b7ebeb796b6a45735dc01436d898801014aced2773a3d6"
 name = "rytmos-engrave"
 version = "0.1.0"
 dependencies = [
+ "defmt",
  "embedded-graphics",
  "heapless 0.8.0",
  "libm",
@@ -1713,9 +1736,11 @@ dependencies = [
  "defmt-rtt",
  "embedded-graphics",
  "embedded-hal",
+ "fixed",
  "fugit",
  "heapless 0.7.17",
  "libm",
+ "log",
  "micromath",
  "panic-probe",
  "pio",
@@ -1749,7 +1774,9 @@ dependencies = [
 name = "rytmos-synth"
 version = "0.1.0"
 dependencies = [
+ "defmt",
  "env_logger",
+ "fixed",
  "hound",
  "libm",
  "log",
@@ -1764,6 +1791,7 @@ version = "0.1.0"
 dependencies = [
  "embedded-graphics",
  "env_logger",
+ "fixed",
  "heapless 0.8.0",
  "hound",
  "libm",
@@ -2008,6 +2036,12 @@ name = "ttf-parser"
 version = "0.20.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "17f77d76d837a7830fe1d4f12b7b4ba4192c1888001c7164257e4bc6d21d96b4"
+
+[[package]]
+name = "typenum"
+version = "1.17.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "42ff0bf0c66b8238c6f3b578df37d0b7848e55df8577b3f74f92a69acceeb825"
 
 [[package]]
 name = "unicode-ident"

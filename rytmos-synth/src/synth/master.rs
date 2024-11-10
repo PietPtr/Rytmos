@@ -1,5 +1,6 @@
 // Generic synth that can be reconfigured at runtime using commands.
 
+use fixed::types::{I1F15, U8F8};
 use rytmos_engrave::staff::Note;
 
 use crate::commands::Command;
@@ -24,7 +25,7 @@ impl OvertoneAndMetronomeSynth {
         let synths = [
             VibratoSynth::new(VibratoSynthSettings {
                 sine_settings: SineSynthSettings {
-                    attack_gain: 0.38,
+                    attack_gain: U8F8::from_num(0.38),
                     initial_phase: 0.13,
                     decay_per_second: 0.5,
                 },
@@ -33,7 +34,7 @@ impl OvertoneAndMetronomeSynth {
             }),
             VibratoSynth::new(VibratoSynthSettings {
                 sine_settings: SineSynthSettings {
-                    attack_gain: 0.4,
+                    attack_gain: U8F8::from_num(0.4),
                     initial_phase: 0.77,
                     decay_per_second: 0.6,
                 },
@@ -42,7 +43,7 @@ impl OvertoneAndMetronomeSynth {
             }),
             VibratoSynth::new(VibratoSynthSettings {
                 sine_settings: SineSynthSettings {
-                    attack_gain: 0.34,
+                    attack_gain: U8F8::from_num(0.34),
                     initial_phase: 0.21,
                     decay_per_second: 0.5,
                 },
@@ -51,7 +52,7 @@ impl OvertoneAndMetronomeSynth {
             }),
             VibratoSynth::new(VibratoSynthSettings {
                 sine_settings: SineSynthSettings {
-                    attack_gain: 0.02,
+                    attack_gain: U8F8::from_num(0.02),
                     initial_phase: 0.29,
                     decay_per_second: 0.4,
                 },
@@ -82,11 +83,11 @@ impl Synth for OvertoneAndMetronomeSynth {
     // Settings can only be changed through commands
     fn configure(&mut self, _settings: Self::Settings) {}
 
-    fn play(&mut self, note: Note, velocity: f32) {
+    fn play(&mut self, note: Note, velocity: U8F8) {
         self.synth.play(note, velocity);
     }
 
-    fn next(&mut self) -> i16 {
+    fn next(&mut self) -> I1F15 {
         let synth = self.synth.next();
         let metronome = self.metronome.next();
         synth.wrapping_add(metronome)
@@ -95,18 +96,20 @@ impl Synth for OvertoneAndMetronomeSynth {
     fn run_command(&mut self, command: Command) {
         super::run_play_command(self, command);
 
-        match command {
-            Command::Play(_, _, _) => (),
-            Command::SetAttack(_, _) => todo!(),
-            Command::Tick(emphasis) => {
-                let note = if emphasis {
-                    rytmos_engrave::a!(0)
-                } else {
-                    rytmos_engrave::b!(0)
-                };
-                self.metronome.play(note, 1.0);
-            }
-            Command::SetTempo(_) => todo!(),
-        }
+        todo!()
+
+        // match command {
+        //     Command::Play(_, _, _) => (),
+        //     Command::SetAttack(_, _) => todo!(),
+        //     Command::Tick(emphasis) => {
+        //         let note = if emphasis {
+        //             rytmos_engrave::a!(0)
+        //         } else {
+        //             rytmos_engrave::b!(0)
+        //         };
+        //         self.metronome.play(note, 1.0);
+        //     }
+        //     Command::SetTempo(_) => todo!(),
+        // }
     }
 }

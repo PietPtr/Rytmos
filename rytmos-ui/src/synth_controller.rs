@@ -1,3 +1,4 @@
+use fixed::types::U8F8;
 use heapless::Vec;
 use log::info;
 use rytmos_engrave::{c, staff::Music};
@@ -128,7 +129,9 @@ impl SynthController {
             match music {
                 Music::Note(note, dur) => {
                     if t16 == count16 as f64 && !last_was_tie {
-                        commands.push(Command::Play(note, 255, 1)).unwrap();
+                        commands
+                            .push(Command::Play(note, U8F8::from_num(1.)))
+                            .unwrap();
                         break;
                     }
                     count16 += (dur.value() * 4.) as u64;
@@ -136,7 +139,9 @@ impl SynthController {
                 }
                 Music::Rest(dur) => {
                     if t16 == count16 as f64 && !last_was_tie {
-                        commands.push(Command::Play(c!(0), 0, 0)).unwrap();
+                        commands
+                            .push(Command::Play(c!(0), U8F8::from_num(0.)))
+                            .unwrap();
                         break;
                     }
                     count16 += (dur.value() as u64) * 4;

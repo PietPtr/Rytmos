@@ -1,3 +1,4 @@
+use fixed::types::{I1F15, U8F8};
 use log::info;
 use rytmos_engrave::staff::{Accidental, Note};
 
@@ -10,7 +11,7 @@ use super::{
 
 pub struct MetronomeSynth {
     sample: usize,
-    velocity: f32,
+    velocity: U8F8,
     play_sample: Option<Sample>,
 }
 
@@ -23,7 +24,7 @@ impl MetronomeSynth {
     pub fn new() -> Self {
         Self {
             sample: 0,
-            velocity: 0.,
+            velocity: 0.into(),
             play_sample: None,
         }
     }
@@ -42,7 +43,7 @@ impl Synth for MetronomeSynth {
 
     /// Ignores the frequency of the note and plays the metronome at the given velocity as amplifier
     /// with the set BPM.
-    fn play(&mut self, note: Note, velocity: f32) {
+    fn play(&mut self, note: Note, velocity: U8F8) {
         self.velocity = velocity;
 
         match note {
@@ -53,7 +54,7 @@ impl Synth for MetronomeSynth {
     }
 
     // This cannot be synced to anything. Change it such that play actually plays the sample and decides on emphasis based on note.
-    fn next(&mut self) -> i16 {
+    fn next(&mut self) -> I1F15 {
         let sample = match self.play_sample {
             Some(Sample::Strong) => {
                 let sample_to_play = STRONG_WAV.get(self.sample);
@@ -82,7 +83,8 @@ impl Synth for MetronomeSynth {
             None => 0,
         };
 
-        (sample as f32 * self.velocity) as i16
+        // (sample as f32 * self.velocity) as i16
+        todo!()
     }
 
     fn run_command(&mut self, command: Command) {
