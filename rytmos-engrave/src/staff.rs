@@ -6,6 +6,7 @@ use embedded_graphics::{
     primitives::{Line, Primitive, PrimitiveStyle, Rectangle, StyledDrawable},
     Drawable,
 };
+use fixed::types::U14F2;
 use heapless::{FnvIndexMap, Vec};
 use log::{debug, error};
 
@@ -14,6 +15,8 @@ use rytmos_symbols::{
     EMPTY_NOTEHEAD, FILLED_NOTEHEAD, HALF_REST, QUARTER_REST, SIXTEENTH_FLAG, SIXTEENTH_REST,
     WHOLE_REST,
 };
+
+use crate::frequencies::MIDI_FREQUENCIES;
 
 #[derive(Debug)]
 pub enum EngraveError {
@@ -1041,6 +1044,41 @@ impl Note {
         a4_frequency * libm::powf(semitone_ratio, total_semitones as f32)
     }
 
+    pub fn lookup_frequency(&self) -> U14F2 {
+        let base_note_semitones = match self {
+            Note::A(_, octave) => (0, *octave),
+            Note::B(_, octave) => (2, *octave),
+            Note::C(_, octave) => (-9, *octave),
+            Note::D(_, octave) => (-7, *octave),
+            Note::E(_, octave) => (-5, *octave),
+            Note::F(_, octave) => (-4, *octave),
+            Note::G(_, octave) => (-2, *octave),
+        };
+
+        let accidental_offset = match self {
+            Note::A(acc, _)
+            | Note::B(acc, _)
+            | Note::C(acc, _)
+            | Note::D(acc, _)
+            | Note::E(acc, _)
+            | Note::F(acc, _)
+            | Note::G(acc, _) => match acc {
+                Accidental::DoubleFlat => -2,
+                Accidental::Flat => -1,
+                Accidental::Natural => 0,
+                Accidental::Sharp => 1,
+                Accidental::DoubleSharp => 2,
+            },
+        };
+
+        let midi_index =
+            69 + base_note_semitones.0 + accidental_offset + (base_note_semitones.1 - 4) * 12;
+        if midi_index < 0 || midi_index >= MIDI_FREQUENCIES.len() as i32 {
+            U14F2::from_num(0.0) // or handle out-of-range index appropriately
+        } else {
+            MIDI_FREQUENCIES[midi_index as usize]
+        }
+    }
     pub fn from_u8_flat(code: u8) -> Self {
         let (note, octave) = Note::midi_to_note_octave(code);
         match note {

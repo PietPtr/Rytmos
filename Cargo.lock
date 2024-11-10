@@ -1720,6 +1720,7 @@ version = "0.1.0"
 dependencies = [
  "defmt",
  "embedded-graphics",
+ "fixed",
  "heapless 0.8.0",
  "libm",
  "log",

@@ -1,7 +1,7 @@
 use fixed::{
     traits::ToFixed,
-    types::{extra::U15, I1F15, U8F8},
-    FixedI32, FixedI64,
+    types::{extra::U15, I1F15, U14F2, U8F8},
+    FixedI32, FixedI64, FixedU32,
 };
 
 use crate::commands::Command;
@@ -28,8 +28,11 @@ impl SawtoothSynth {
         }
     }
 
-    pub fn set_frequency(&mut self, frequency_in_hertz: f32) {
-        self.increment = I1F15::from_num(frequency_in_hertz / SAMPLE_RATE);
+    pub fn set_frequency(&mut self, frequency_in_hertz: U14F2) {
+        // TODO: probably slow, possible to just recompute
+        self.increment = I1F15::from_num(
+            FixedU32::<U15>::from(frequency_in_hertz) / FixedU32::<U15>::from_num(SAMPLE_RATE),
+        );
     }
 }
 
@@ -47,7 +50,7 @@ impl Synth for SawtoothSynth {
 
     // TODO: convert this float in the trait to some sort of fixed point value
     fn play(&mut self, note: rytmos_engrave::staff::Note, velocity: U8F8) {
-        self.set_frequency(note.frequency());
+        self.set_frequency(note.lookup_frequency());
         self.velocity = velocity;
     }
 

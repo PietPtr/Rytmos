@@ -169,7 +169,7 @@ fn synth_core(sys_freq: u32) -> ! {
         }
 
         if ran_command && i2s_tx_transfer.is_done() {
-            // warn!("i2s transfer already done, late caused by command.");
+            warn!("i2s transfer already done, late caused by command.");
         }
 
         let (next_tx_buf, next_tx_transfer) = i2s_tx_transfer.wait();
