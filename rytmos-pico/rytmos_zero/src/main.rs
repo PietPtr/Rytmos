@@ -10,6 +10,7 @@ use core::cell::RefCell;
 use core::u32;
 
 use crate::pac::interrupt;
+use common::plls;
 use cortex_m::{interrupt::Mutex, singleton};
 use defmt::*;
 use defmt_rtt as _;
@@ -68,8 +69,6 @@ use rytmos_synth::{
     commands::Command,
     synth::{master::OvertoneAndMetronomeSynth, Synth},
 };
-
-mod plls;
 
 const EXTERNAL_XTAL_FREQ_HZ: HertzU32 = HertzU32::from_raw(12_000_000u32);
 const RP2040_CLOCK_HZ: HertzU32 = HertzU32::from_raw(307_200_000u32);
@@ -208,80 +207,11 @@ fn main() -> ! {
     let mut watchdog = Watchdog::new(pac.WATCHDOG);
     let mut sio = Sio::new(pac.SIO);
 
-    let xosc = setup_xosc_blocking(pac.XOSC, EXTERNAL_XTAL_FREQ_HZ)
-        .map_err(InitError::XoscErr)
-        .ok()
-        .unwrap();
-
     watchdog.enable_tick_generation((EXTERNAL_XTAL_FREQ_HZ.raw() / 1_000_000) as u8);
 
     let mut clocks = ClocksManager::new(pac.CLOCKS);
 
-    {
-        let pll_sys = setup_pll_blocking(
-            pac.PLL_SYS,
-            xosc.operating_frequency(),
-            plls::SYS_PLL_CONFIG_307P2MHZ,
-            &mut clocks,
-            &mut pac.RESETS,
-        )
-        .map_err(InitError::PllError)
-        .ok()
-        .unwrap();
-
-        let pll_usb = setup_pll_blocking(
-            pac.PLL_USB,
-            xosc.operating_frequency(),
-            PLL_USB_48MHZ,
-            &mut clocks,
-            &mut pac.RESETS,
-        )
-        .map_err(InitError::PllError)
-        .ok()
-        .unwrap();
-
-        clocks
-            .reference_clock
-            .configure_clock(&xosc, xosc.get_freq())
-            .map_err(InitError::ClockError)
-            .ok()
-            .unwrap();
-
-        clocks
-            .system_clock
-            .configure_clock(&pll_sys, pll_sys.get_freq())
-            .map_err(InitError::ClockError)
-            .ok()
-            .unwrap();
-
-        clocks
-            .usb_clock
-            .configure_clock(&pll_usb, pll_usb.get_freq())
-            .map_err(InitError::ClockError)
-            .ok()
-            .unwrap();
-
-        clocks
-            .adc_clock
-            .configure_clock(&pll_usb, pll_usb.get_freq())
-            .map_err(InitError::ClockError)
-            .ok()
-            .unwrap();
-
-        clocks
-            .rtc_clock
-            .configure_clock(&pll_usb, HertzU32::from_raw(46875u32))
-            .map_err(InitError::ClockError)
-            .ok()
-            .unwrap();
-
-        clocks
-            .peripheral_clock
-            .configure_clock(&clocks.system_clock, clocks.system_clock.freq())
-            .map_err(InitError::ClockError)
-            .ok()
-            .unwrap();
-    }
+    common::setup_clocks!(pac, clocks);
 
     let mut delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().to_Hz());
 

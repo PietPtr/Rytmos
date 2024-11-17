@@ -1,5 +1,5 @@
 use fixed::{
-    traits::{Fixed, ToFixed},
+    traits::ToFixed,
     types::{extra::U15, I1F15, U8F8},
     FixedI32,
 };

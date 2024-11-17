@@ -1,5 +1,3 @@
-// TODO: refactor for 12kHz?
-
 use fugit::HertzU32;
 use rp_pico::hal::pll::PLLConfig;
 

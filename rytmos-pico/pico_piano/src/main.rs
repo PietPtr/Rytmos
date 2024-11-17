@@ -9,19 +9,14 @@ pub static BOOT2_FIRMWARE: [u8; 256] = rp2040_boot2::BOOT_LOADER_W25Q080;
 use core::cell::RefCell;
 use core::u32;
 
-use crate::pac::interrupt;
-use common::plls;
 use cortex_m::{interrupt::Mutex, singleton};
+use debouncr::debounce_16;
 use defmt::*;
 use defmt_rtt as _;
 use embedded_hal::digital::v2::InputPin;
-use embedded_hal::digital::v2::OutputPin;
 use fixed::types::U8F8;
 use fugit::Duration;
 use fugit::HertzU32;
-use fugit::RateExtU32;
-use heapless::Vec;
-use micromath::F32Ext;
 use panic_probe as _;
 use pio_proc::pio_file;
 use rp_pico::{
@@ -42,38 +37,17 @@ use rp_pico::{
     pac,
 };
 
-use rytmos_engrave::ais;
-use rytmos_engrave::b;
-use rytmos_engrave::cis;
-use rytmos_engrave::dis;
-use rytmos_engrave::fis;
-use rytmos_engrave::gis;
-use rytmos_engrave::{a, c, d, e, f, g};
-use rytmos_synth::synth::sawtooth::SawtoothSynth;
-use rytmos_synth::synth::sawtooth::SawtoothSynthSettings;
-use rytmos_synth::{commands::Command, synth::Synth};
+use rytmos_engrave::{a, ais, b, c, cis, d, dis, e, f, fis, g, gis};
+use rytmos_synth::{
+    commands::Command,
+    synth::{
+        sawtooth::{SawtoothSynth, SawtoothSynthSettings},
+        Synth,
+    },
+};
 
-const EXTERNAL_XTAL_FREQ_HZ: HertzU32 = HertzU32::from_raw(12_000_000u32);
-const RP2040_CLOCK_HZ: HertzU32 = HertzU32::from_raw(307_200_000u32);
-
-const SAMPLE_RATE: HertzU32 = HertzU32::from_raw(24_000u32);
-const PIO_INSTRUCTIONS_PER_SAMPLE: u32 = 2;
-const NUM_CHANNELS: u32 = 2;
-const SAMPLE_RESOLUTION: u32 = 16; // in bits per sample
-
-const I2S_PIO_CLOCK_HZ: HertzU32 = HertzU32::from_raw(
-    SAMPLE_RATE.raw() * NUM_CHANNELS * SAMPLE_RESOLUTION * PIO_INSTRUCTIONS_PER_SAMPLE,
-);
-const I2S_PIO_CLOCKDIV_INT: u16 = (RP2040_CLOCK_HZ.raw() / I2S_PIO_CLOCK_HZ.raw()) as u16;
-const I2S_PIO_CLOCKDIV_FRAC: u8 =
-    (((RP2040_CLOCK_HZ.raw() % I2S_PIO_CLOCK_HZ.raw()) * 256) / I2S_PIO_CLOCK_HZ.raw()) as u8;
-
-const MCLK_HZ: HertzU32 = HertzU32::from_raw(8 * I2S_PIO_CLOCK_HZ.raw());
-const MCLK_CLOCKDIV_INT: u16 = (RP2040_CLOCK_HZ.raw() / MCLK_HZ.raw()) as u16;
-const MCLK_CLOCKDIV_FRAC: u8 =
-    (((RP2040_CLOCK_HZ.raw() % MCLK_HZ.raw()) * 256) / MCLK_HZ.raw()) as u8;
-
-const BUFFER_SIZE: usize = 16;
+use common::consts::*;
+use common::plls;
 
 static mut CORE1_STACK: Stack<4096> = Stack::new();
 
@@ -103,7 +77,7 @@ fn synth_core(sys_freq: u32) -> ! {
 
     let (mut sm0, _rx0, _tx0) = PIOBuilder::from_program(pio_i2s_mclk_output)
         .set_pins(i2s_sck_pin.id().num, 1)
-        .clock_divisor_fixed_point(MCLK_CLOCKDIV_INT, MCLK_CLOCKDIV_FRAC) // TODO: hardcoded, should give a clock at LRCLK frequency * 256
+        .clock_divisor_fixed_point(MCLK_CLOCKDIV_INT, MCLK_CLOCKDIV_FRAC)
         .build(sm0);
 
     let (mut sm1, _rx1, tx1) = PIOBuilder::from_program(pio_i2s_send_master)
@@ -144,26 +118,16 @@ fn synth_core(sys_freq: u32) -> ! {
     let mut sample = 0i16;
 
     let mut warned = false;
-    let mut ran_command = false;
 
     loop {
-        ran_command = false;
         sio.fifo
             .read()
             .and_then(Command::deserialize)
-            .inspect(|&command| {
-                trace!("Running Synth command: {}", command);
-                ran_command = true;
-                synth.run_command(command)
-            });
+            .inspect(|&command| synth.run_command(command));
 
         if !warned && i2s_tx_transfer.is_done() {
             warn!("i2s transfer already done, probably late.");
             warned = true;
-        }
-
-        if ran_command && i2s_tx_transfer.is_done() {
-            warn!("i2s transfer already done, late caused by command.");
         }
 
         let (next_tx_buf, next_tx_transfer) = i2s_tx_transfer.wait();
@@ -191,82 +155,13 @@ fn main() -> ! {
     let mut watchdog = Watchdog::new(pac.WATCHDOG);
     let mut sio = Sio::new(pac.SIO);
 
-    let xosc = setup_xosc_blocking(pac.XOSC, EXTERNAL_XTAL_FREQ_HZ)
-        .map_err(InitError::XoscErr)
-        .ok()
-        .unwrap();
-
     watchdog.enable_tick_generation((EXTERNAL_XTAL_FREQ_HZ.raw() / 1_000_000) as u8);
 
     let mut clocks = ClocksManager::new(pac.CLOCKS);
 
-    {
-        let pll_sys = setup_pll_blocking(
-            pac.PLL_SYS,
-            xosc.operating_frequency(),
-            plls::SYS_PLL_CONFIG_307P2MHZ,
-            &mut clocks,
-            &mut pac.RESETS,
-        )
-        .map_err(InitError::PllError)
-        .ok()
-        .unwrap();
+    common::setup_clocks!(pac, clocks);
 
-        let pll_usb = setup_pll_blocking(
-            pac.PLL_USB,
-            xosc.operating_frequency(),
-            PLL_USB_48MHZ,
-            &mut clocks,
-            &mut pac.RESETS,
-        )
-        .map_err(InitError::PllError)
-        .ok()
-        .unwrap();
-
-        clocks
-            .reference_clock
-            .configure_clock(&xosc, xosc.get_freq())
-            .map_err(InitError::ClockError)
-            .ok()
-            .unwrap();
-
-        clocks
-            .system_clock
-            .configure_clock(&pll_sys, pll_sys.get_freq())
-            .map_err(InitError::ClockError)
-            .ok()
-            .unwrap();
-
-        clocks
-            .usb_clock
-            .configure_clock(&pll_usb, pll_usb.get_freq())
-            .map_err(InitError::ClockError)
-            .ok()
-            .unwrap();
-
-        clocks
-            .adc_clock
-            .configure_clock(&pll_usb, pll_usb.get_freq())
-            .map_err(InitError::ClockError)
-            .ok()
-            .unwrap();
-
-        clocks
-            .rtc_clock
-            .configure_clock(&pll_usb, HertzU32::from_raw(46875u32))
-            .map_err(InitError::ClockError)
-            .ok()
-            .unwrap();
-
-        clocks
-            .peripheral_clock
-            .configure_clock(&clocks.system_clock, clocks.system_clock.freq())
-            .map_err(InitError::ClockError)
-            .ok()
-            .unwrap();
-    }
-
-    let mut delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().to_Hz());
+    let mut _delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().to_Hz());
 
     let pins = gpio::Pins::new(
         pac.IO_BANK0,
@@ -316,12 +211,23 @@ fn main() -> ! {
     let fn2_pin = pins.gpio2.into_pull_up_input();
     let fn3_pin = pins.gpio3.into_pull_up_input();
 
+    // TODO: implement own debouncer based on counting because 16 is too short.
+    let mut fn0_debouncer = debounce_16(false);
+    let mut fn1_debouncer = debounce_16(false);
+    let mut fn2_debouncer = debounce_16(false);
+    let mut fn3_debouncer = debounce_16(false);
+
     info!("Start I/O thread.");
 
-    let octave = 4;
-    let mut button_states = [false; 12];
+    let mut octave = 4;
+    let mut button_states = [false; 16];
 
     loop {
+        fn0_debouncer.update(fn0_pin.is_low().unwrap());
+        fn1_debouncer.update(fn1_pin.is_low().unwrap());
+        fn2_debouncer.update(fn2_pin.is_low().unwrap());
+        fn3_debouncer.update(fn3_pin.is_low().unwrap());
+
         let new_button_states = [
             c_pin.is_low().unwrap(),
             cis_pin.is_low().unwrap(),
@@ -335,33 +241,39 @@ fn main() -> ! {
             a_pin.is_low().unwrap(),
             ais_pin.is_low().unwrap(),
             b_pin.is_low().unwrap(),
+            fn0_debouncer.is_high(),
+            fn1_debouncer.is_high(),
+            fn2_debouncer.is_high(),
+            fn3_debouncer.is_high(),
         ];
 
-        let command = if new_button_states[0] && !button_states[0] {
+        let command = if new_button_states[NOTE_C] && !button_states[NOTE_C] {
             Some(Command::Play(c!(octave), U8F8::from_num(1.0)))
-        } else if new_button_states[1] && !button_states[1] {
+        } else if new_button_states[NOTE_CIS] && !button_states[NOTE_CIS] {
             Some(Command::Play(cis!(octave), U8F8::from_num(1.0)))
-        } else if new_button_states[2] && !button_states[2] {
+        } else if new_button_states[NOTE_D] && !button_states[NOTE_D] {
             Some(Command::Play(d!(octave), U8F8::from_num(1.0)))
-        } else if new_button_states[3] && !button_states[3] {
+        } else if new_button_states[NOTE_DIS] && !button_states[NOTE_DIS] {
             Some(Command::Play(dis!(octave), U8F8::from_num(1.0)))
-        } else if new_button_states[4] && !button_states[4] {
+        } else if new_button_states[NOTE_E] && !button_states[NOTE_E] {
             Some(Command::Play(e!(octave), U8F8::from_num(1.0)))
-        } else if new_button_states[5] && !button_states[5] {
+        } else if new_button_states[NOTE_F] && !button_states[NOTE_F] {
             Some(Command::Play(f!(octave), U8F8::from_num(1.0)))
-        } else if new_button_states[6] && !button_states[6] {
+        } else if new_button_states[NOTE_FIS] && !button_states[NOTE_FIS] {
             Some(Command::Play(fis!(octave), U8F8::from_num(1.0)))
-        } else if new_button_states[7] && !button_states[7] {
+        } else if new_button_states[NOTE_G] && !button_states[NOTE_G] {
             Some(Command::Play(g!(octave), U8F8::from_num(1.0)))
-        } else if new_button_states[8] && !button_states[8] {
+        } else if new_button_states[NOTE_GIS] && !button_states[NOTE_GIS] {
             Some(Command::Play(gis!(octave), U8F8::from_num(1.0)))
-        } else if new_button_states[9] && !button_states[9] {
+        } else if new_button_states[NOTE_A] && !button_states[NOTE_A] {
             Some(Command::Play(a!(octave), U8F8::from_num(1.0)))
-        } else if new_button_states[10] && !button_states[10] {
+        } else if new_button_states[NOTE_AIS] && !button_states[NOTE_AIS] {
             Some(Command::Play(ais!(octave), U8F8::from_num(1.0)))
-        } else if new_button_states[11] && !button_states[11] {
+        } else if new_button_states[NOTE_B] && !button_states[NOTE_B] {
             Some(Command::Play(b!(octave), U8F8::from_num(1.0)))
-        } else if button_states.iter().any(|&b| b) && new_button_states.iter().all(|b| !b) {
+        } else if button_states.iter().take(12).any(|&b| b)
+            && new_button_states.iter().take(12).all(|b| !b)
+        {
             Some(Command::Play(c!(0), U8F8::from_num(0.0)))
         } else {
             None
@@ -377,6 +289,30 @@ fn main() -> ! {
             });
         }
 
+        if button_states[FN_0] {
+            octave = 4
+        } else if button_states[FN_2] {
+            octave = 2
+        } else {
+            octave = 3
+        }
+
         button_states = new_button_states;
     }
 }
+const NOTE_C: usize = 0;
+const NOTE_CIS: usize = 1;
+const NOTE_D: usize = 2;
+const NOTE_DIS: usize = 3;
+const NOTE_E: usize = 4;
+const NOTE_F: usize = 5;
+const NOTE_FIS: usize = 6;
+const NOTE_G: usize = 7;
+const NOTE_GIS: usize = 8;
+const NOTE_A: usize = 9;
+const NOTE_AIS: usize = 10;
+const NOTE_B: usize = 11;
+const FN_0: usize = 12;
+const FN_1: usize = 13;
+const FN_2: usize = 14;
+const FN_3: usize = 15;

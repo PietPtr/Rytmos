@@ -23,8 +23,9 @@ rp2040-boot2 = "0.2.1"
 libm = "0.2.8"
 embedded-graphics = "0.8.1"
 sh1106 = "0.5.0"
+micromath = "2.1.0"
 rytmos-engrave = { path = "../../rytmos-engrave" }
 rytmos-scribe = { path = "../../rytmos-scribe" }
 rytmos-synth = { path = "../../rytmos-synth" }
 rytmos-ui = { path = "../../rytmos-ui" }
-micromath = "2.1.0"
+common = { path = "../common" }
