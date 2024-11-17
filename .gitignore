@@ -3,3 +3,4 @@
 pcbs/**/*backups*
 pcbs/**/*_autosave*
 pcbs/**/~*.lck
+pcbs/**/*.bak

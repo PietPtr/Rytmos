@@ -2849,17 +2849,6 @@
 		)
 		(uuid "bb937138-07ae-47c9-88c5-7199806ef3ec")
 	)
-	(label "3V3"
-		(at 139.7 85.09 0)
-		(fields_autoplaced yes)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify left bottom)
-		)
-		(uuid "c1772e00-3769-4600-8507-c74dc874aefd")
-	)
 	(label "G"
 		(at 55.88 115.57 180)
 		(fields_autoplaced yes)
@@ -5319,6 +5308,73 @@
 			(project "pico_piano"
 				(path "/5e24b6d7-8d67-4f70-8e44-f3ac3114fe70"
 					(reference "#PWR02")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:+5V")
+		(at 139.7 85.09 270)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "ecb8b5e7-7618-44bc-83c3-12a6626c86dc")
+		(property "Reference" "#PWR018"
+			(at 135.89 85.09 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "+5V"
+			(at 143.51 85.0899 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" ""
+			(at 139.7 85.09 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 139.7 85.09 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Power symbol creates a global label with name \"+5V\""
+			(at 139.7 85.09 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "2e5afe22-8326-4960-ab06-2ef0b4afe5a9")
+		)
+		(instances
+			(project ""
+				(path "/5e24b6d7-8d67-4f70-8e44-f3ac3114fe70"
+					(reference "#PWR018")
 					(unit 1)
 				)
 			)
