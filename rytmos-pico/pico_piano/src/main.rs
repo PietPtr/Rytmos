@@ -56,8 +56,7 @@ use rytmos_synth::{commands::Command, synth::Synth};
 const EXTERNAL_XTAL_FREQ_HZ: HertzU32 = HertzU32::from_raw(12_000_000u32);
 const RP2040_CLOCK_HZ: HertzU32 = HertzU32::from_raw(307_200_000u32);
 
-// TODO: these settings result in 40kHz, not 48kHz.
-const SAMPLE_RATE: HertzU32 = HertzU32::from_raw(44_100u32);
+const SAMPLE_RATE: HertzU32 = HertzU32::from_raw(24_000u32);
 const PIO_INSTRUCTIONS_PER_SAMPLE: u32 = 2;
 const NUM_CHANNELS: u32 = 2;
 const SAMPLE_RESOLUTION: u32 = 16; // in bits per sample
@@ -68,6 +67,11 @@ const I2S_PIO_CLOCK_HZ: HertzU32 = HertzU32::from_raw(
 const I2S_PIO_CLOCKDIV_INT: u16 = (RP2040_CLOCK_HZ.raw() / I2S_PIO_CLOCK_HZ.raw()) as u16;
 const I2S_PIO_CLOCKDIV_FRAC: u8 =
     (((RP2040_CLOCK_HZ.raw() % I2S_PIO_CLOCK_HZ.raw()) * 256) / I2S_PIO_CLOCK_HZ.raw()) as u8;
+
+const MCLK_HZ: HertzU32 = HertzU32::from_raw(8 * I2S_PIO_CLOCK_HZ.raw());
+const MCLK_CLOCKDIV_INT: u16 = (RP2040_CLOCK_HZ.raw() / MCLK_HZ.raw()) as u16;
+const MCLK_CLOCKDIV_FRAC: u8 =
+    (((RP2040_CLOCK_HZ.raw() % MCLK_HZ.raw()) * 256) / MCLK_HZ.raw()) as u8;
 
 const BUFFER_SIZE: usize = 16;
 
@@ -99,7 +103,7 @@ fn synth_core(sys_freq: u32) -> ! {
 
     let (mut sm0, _rx0, _tx0) = PIOBuilder::from_program(pio_i2s_mclk_output)
         .set_pins(i2s_sck_pin.id().num, 1)
-        .clock_divisor_fixed_point(13, 155) // TODO: hardcoded, should give a clock at LRCLK frequency * 256
+        .clock_divisor_fixed_point(MCLK_CLOCKDIV_INT, MCLK_CLOCKDIV_FRAC) // TODO: hardcoded, should give a clock at LRCLK frequency * 256
         .build(sm0);
 
     let (mut sm1, _rx1, tx1) = PIOBuilder::from_program(pio_i2s_send_master)

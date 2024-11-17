@@ -1121,7 +1121,7 @@ impl Note {
     }
 
     pub fn to_midi_code(&self) -> u8 {
-        let base_note_semitones = match self {
+        let (offset, octave) = match self {
             Note::A(_, octave) => (0, *octave),
             Note::B(_, octave) => (2, *octave),
             Note::C(_, octave) => (-9, *octave),
@@ -1147,7 +1147,7 @@ impl Note {
             },
         };
 
-        (69 + base_note_semitones.0 + accidental_offset + (base_note_semitones.1 - 4) * 12) as u8
+        (69 + offset + accidental_offset + (octave - 4) * 12) as u8
     }
 }
 

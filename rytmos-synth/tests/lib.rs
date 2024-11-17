@@ -413,7 +413,7 @@ fn print_frequency_bit_consts() {
     }
 
     // Bit constants for increments at the given sample rate.
-    let sample_rate = 12000;
+    let sample_rate = 24000;
     for f in freqs {
         let inc = if f < 10000 {
             I1F15::from_num(FixedU32::<U15>::from(f) / FixedU32::<U15>::from_num(sample_rate))

@@ -1,6 +1,5 @@
-use defmt::error;
 use fixed::{
-    traits::ToFixed,
+    traits::{Fixed, ToFixed},
     types::{extra::U15, I1F15, U8F8},
     FixedI32,
 };
@@ -44,10 +43,10 @@ impl Synth for SawtoothSynth {
 
     fn play(&mut self, note: rytmos_engrave::staff::Note, velocity: U8F8) {
         self.velocity = velocity;
-        self.increment = note.lookup_increment_44100().unwrap_or_else(|| {
-            error!("Failed to lookup increment");
+        self.increment = note.lookup_increment_24000().unwrap_or_else(|| {
+            log::error!("Failed to lookup increment");
             I1F15::from_num(0)
-        });
+        }) << 1;
     }
 
     fn next(&mut self) -> I1F15 {
