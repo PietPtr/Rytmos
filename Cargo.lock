@@ -253,6 +253,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d3fd119d74b830634cea2a0f58bbd0d54540518a14397557951e79340abc28c0"
 
 [[package]]
+name = "common"
+version = "0.1.0"
+dependencies = [
+ "fugit",
+ "rp-pico",
+]
+
+[[package]]
 name = "core-foundation"
 version = "0.9.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1343,6 +1351,33 @@ dependencies = [
 ]
 
 [[package]]
+name = "pico-piano"
+version = "0.1.0"
+dependencies = [
+ "common",
+ "cortex-m",
+ "cortex-m-rt",
+ "defmt",
+ "defmt-rtt",
+ "embedded-hal",
+ "fixed",
+ "fugit",
+ "heapless 0.7.17",
+ "libm",
+ "log",
+ "micromath",
+ "panic-probe",
+ "pio",
+ "pio-proc",
+ "rp-pico",
+ "rp2040-boot2",
+ "rytmos-engrave",
+ "rytmos-scribe",
+ "rytmos-synth",
+ "rytmos-ui",
+]
+
+[[package]]
 name = "pio"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1728,34 +1763,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rytmos-pico"
-version = "0.1.0"
-dependencies = [
- "cortex-m",
- "cortex-m-rt",
- "defmt",
- "defmt-rtt",
- "embedded-graphics",
- "embedded-hal",
- "fixed",
- "fugit",
- "heapless 0.7.17",
- "libm",
- "log",
- "micromath",
- "panic-probe",
- "pio",
- "pio-proc",
- "rp-pico",
- "rp2040-boot2",
- "rytmos-engrave",
- "rytmos-scribe",
- "rytmos-synth",
- "rytmos-ui",
- "sh1106",
-]
-
-[[package]]
 name = "rytmos-scribe"
 version = "0.1.0"
 dependencies = [
@@ -1802,6 +1809,34 @@ dependencies = [
  "rytmos-scribe",
  "rytmos-symbols",
  "rytmos-synth",
+]
+
+[[package]]
+name = "rytmos-zero"
+version = "0.1.0"
+dependencies = [
+ "cortex-m",
+ "cortex-m-rt",
+ "defmt",
+ "defmt-rtt",
+ "embedded-graphics",
+ "embedded-hal",
+ "fixed",
+ "fugit",
+ "heapless 0.7.17",
+ "libm",
+ "log",
+ "micromath",
+ "panic-probe",
+ "pio",
+ "pio-proc",
+ "rp-pico",
+ "rp2040-boot2",
+ "rytmos-engrave",
+ "rytmos-scribe",
+ "rytmos-synth",
+ "rytmos-ui",
+ "sh1106",
 ]
 
 [[package]]
