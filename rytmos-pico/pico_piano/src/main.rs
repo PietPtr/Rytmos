@@ -14,6 +14,7 @@ use common::plls;
 use cortex_m::{interrupt::Mutex, singleton};
 use defmt::*;
 use defmt_rtt as _;
+use embedded_hal::digital::v2::InputPin;
 use embedded_hal::digital::v2::OutputPin;
 use fixed::types::U8F8;
 use fugit::Duration;
@@ -41,6 +42,12 @@ use rp_pico::{
     pac,
 };
 
+use rytmos_engrave::ais;
+use rytmos_engrave::b;
+use rytmos_engrave::cis;
+use rytmos_engrave::dis;
+use rytmos_engrave::fis;
+use rytmos_engrave::gis;
 use rytmos_engrave::{a, c, d, e, f, g};
 use rytmos_synth::synth::sawtooth::SawtoothSynth;
 use rytmos_synth::synth::sawtooth::SawtoothSynthSettings;
@@ -287,41 +294,85 @@ fn main() -> ! {
         ALARM.borrow(cs).replace(Some(alarm));
     });
 
+    let c_pin = pins.gpio4.into_pull_up_input();
+    let cis_pin = pins.gpio5.into_pull_up_input();
+    let d_pin = pins.gpio6.into_pull_up_input();
+    let dis_pin = pins.gpio7.into_pull_up_input();
+    let e_pin = pins.gpio12.into_pull_up_input();
+    let f_pin = pins.gpio13.into_pull_up_input();
+    let fis_pin = pins.gpio14.into_pull_up_input();
+    let g_pin = pins.gpio15.into_pull_up_input();
+    let gis_pin = pins.gpio19.into_pull_up_input();
+    let a_pin = pins.gpio18.into_pull_up_input();
+    let ais_pin = pins.gpio17.into_pull_up_input();
+    let b_pin = pins.gpio16.into_pull_up_input();
+
+    let fn0_pin = pins.gpio0.into_pull_up_input();
+    let fn1_pin = pins.gpio1.into_pull_up_input();
+    let fn2_pin = pins.gpio2.into_pull_up_input();
+    let fn3_pin = pins.gpio3.into_pull_up_input();
+
     info!("Start I/O thread.");
 
-    let mut commands = [
-        Command::Play(c!(4), U8F8::from_num(1.)),
-        Command::Play(d!(4), U8F8::from_num(1.2)),
-        Command::Play(e!(4), U8F8::from_num(1.3)),
-        Command::Play(c!(4), U8F8::from_num(0.9)),
-        Command::Play(c!(4), U8F8::from_num(0.)),
-        Command::Play(c!(4), U8F8::from_num(1.)),
-        Command::Play(d!(4), U8F8::from_num(1.)),
-        Command::Play(e!(4), U8F8::from_num(1.)),
-        Command::Play(c!(4), U8F8::from_num(1.)),
-        Command::Play(c!(4), U8F8::from_num(0.)),
-        Command::Play(e!(4), U8F8::from_num(1.)),
-        Command::Play(f!(4), U8F8::from_num(1.)),
-        Command::Play(g!(4), U8F8::from_num(1.)),
-        Command::Play(c!(4), U8F8::from_num(0.)),
-        Command::Play(e!(4), U8F8::from_num(1.)),
-        Command::Play(f!(4), U8F8::from_num(1.)),
-        Command::Play(g!(4), U8F8::from_num(1.)),
-        Command::Play(c!(4), U8F8::from_num(0.)),
-    ]
-    .into_iter()
-    .cycle();
+    let octave = 4;
+    let mut button_states = [false; 12];
 
     loop {
-        delay.delay_ms(700);
+        let new_button_states = [
+            c_pin.is_low().unwrap(),
+            cis_pin.is_low().unwrap(),
+            d_pin.is_low().unwrap(),
+            dis_pin.is_low().unwrap(),
+            e_pin.is_low().unwrap(),
+            f_pin.is_low().unwrap(),
+            fis_pin.is_low().unwrap(),
+            g_pin.is_low().unwrap(),
+            gis_pin.is_low().unwrap(),
+            a_pin.is_low().unwrap(),
+            ais_pin.is_low().unwrap(),
+            b_pin.is_low().unwrap(),
+        ];
 
-        let command = commands.next().unwrap();
-        let command_serialized = command.serialize();
+        let command = if new_button_states[0] && !button_states[0] {
+            Some(Command::Play(c!(octave), U8F8::from_num(1.0)))
+        } else if new_button_states[1] && !button_states[1] {
+            Some(Command::Play(cis!(octave), U8F8::from_num(1.0)))
+        } else if new_button_states[2] && !button_states[2] {
+            Some(Command::Play(d!(octave), U8F8::from_num(1.0)))
+        } else if new_button_states[3] && !button_states[3] {
+            Some(Command::Play(dis!(octave), U8F8::from_num(1.0)))
+        } else if new_button_states[4] && !button_states[4] {
+            Some(Command::Play(e!(octave), U8F8::from_num(1.0)))
+        } else if new_button_states[5] && !button_states[5] {
+            Some(Command::Play(f!(octave), U8F8::from_num(1.0)))
+        } else if new_button_states[6] && !button_states[6] {
+            Some(Command::Play(fis!(octave), U8F8::from_num(1.0)))
+        } else if new_button_states[7] && !button_states[7] {
+            Some(Command::Play(g!(octave), U8F8::from_num(1.0)))
+        } else if new_button_states[8] && !button_states[8] {
+            Some(Command::Play(gis!(octave), U8F8::from_num(1.0)))
+        } else if new_button_states[9] && !button_states[9] {
+            Some(Command::Play(a!(octave), U8F8::from_num(1.0)))
+        } else if new_button_states[10] && !button_states[10] {
+            Some(Command::Play(ais!(octave), U8F8::from_num(1.0)))
+        } else if new_button_states[11] && !button_states[11] {
+            Some(Command::Play(b!(octave), U8F8::from_num(1.0)))
+        } else if button_states.iter().any(|&b| b) && new_button_states.iter().all(|b| !b) {
+            Some(Command::Play(c!(0), U8F8::from_num(0.0)))
+        } else {
+            None
+        };
 
-        cortex_m::interrupt::free(|cs| {
-            let mut fifo = FIFO.borrow(cs).take().unwrap();
-            fifo.write(command_serialized);
-            FIFO.borrow(cs).replace(Some(fifo));
-        });
+        if let Some(command) = command {
+            let command_serialized = command.serialize();
+
+            cortex_m::interrupt::free(|cs| {
+                let mut fifo = FIFO.borrow(cs).take().unwrap();
+                fifo.write(command_serialized);
+                FIFO.borrow(cs).replace(Some(fifo));
+            });
+        }
+
+        button_states = new_button_states;
     }
 }
