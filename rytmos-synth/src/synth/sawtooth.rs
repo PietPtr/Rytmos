@@ -1,12 +1,13 @@
+use defmt::error;
 use fixed::{
     traits::ToFixed,
-    types::{extra::U15, I1F15, U14F2, U8F8},
-    FixedI32, FixedI64, FixedU32,
+    types::{extra::U15, I1F15, U8F8},
+    FixedI32,
 };
 
 use crate::commands::Command;
 
-use super::{run_play_command, Synth, SAMPLE_RATE};
+use super::{run_play_command, Synth};
 
 pub struct SawtoothSynth {
     settings: SawtoothSynthSettings,
@@ -27,13 +28,6 @@ impl SawtoothSynth {
             sample_counter: 0,
         }
     }
-
-    pub fn set_frequency(&mut self, frequency_in_hertz: U14F2) {
-        // TODO: probably slow, possible to just recompute
-        self.increment = I1F15::from_num(
-            FixedU32::<U15>::from(frequency_in_hertz) / FixedU32::<U15>::from_num(SAMPLE_RATE),
-        );
-    }
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -48,10 +42,12 @@ impl Synth for SawtoothSynth {
         self.settings = settings
     }
 
-    // TODO: convert this float in the trait to some sort of fixed point value
     fn play(&mut self, note: rytmos_engrave::staff::Note, velocity: U8F8) {
-        self.set_frequency(note.lookup_frequency());
         self.velocity = velocity;
+        self.increment = note.lookup_increment_44100().unwrap_or_else(|| {
+            error!("Failed to lookup increment");
+            I1F15::from_num(0)
+        });
     }
 
     fn next(&mut self) -> I1F15 {
@@ -78,7 +74,7 @@ impl Synth for SawtoothSynth {
 
         #[allow(clippy::single_match)]
         match command {
-            Command::SetAttack(attack) => {
+            Command::SetAttack(_attack) => {
                 // self.settings.attack_gain = (attack as u32 * 256) as f32 * scale as f32
             }
             _ => (),

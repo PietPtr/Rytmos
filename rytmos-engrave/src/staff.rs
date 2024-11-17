@@ -6,7 +6,7 @@ use embedded_graphics::{
     primitives::{Line, Primitive, PrimitiveStyle, Rectangle, StyledDrawable},
     Drawable,
 };
-use fixed::types::U14F2;
+use fixed::types::{I1F15, U14F2};
 use heapless::{FnvIndexMap, Vec};
 use log::{debug, error};
 
@@ -16,7 +16,10 @@ use rytmos_symbols::{
     WHOLE_REST,
 };
 
-use crate::frequencies::MIDI_FREQUENCIES;
+use crate::frequencies::{
+    MIDI_FREQUENCIES, MIDI_INCREMENTS_12000, MIDI_INCREMENTS_24000, MIDI_INCREMENTS_44100,
+    MIDI_INCREMENTS_48000,
+};
 
 #[derive(Debug)]
 pub enum EngraveError {
@@ -1045,40 +1048,34 @@ impl Note {
     }
 
     pub fn lookup_frequency(&self) -> U14F2 {
-        let base_note_semitones = match self {
-            Note::A(_, octave) => (0, *octave),
-            Note::B(_, octave) => (2, *octave),
-            Note::C(_, octave) => (-9, *octave),
-            Note::D(_, octave) => (-7, *octave),
-            Note::E(_, octave) => (-5, *octave),
-            Note::F(_, octave) => (-4, *octave),
-            Note::G(_, octave) => (-2, *octave),
-        };
-
-        let accidental_offset = match self {
-            Note::A(acc, _)
-            | Note::B(acc, _)
-            | Note::C(acc, _)
-            | Note::D(acc, _)
-            | Note::E(acc, _)
-            | Note::F(acc, _)
-            | Note::G(acc, _) => match acc {
-                Accidental::DoubleFlat => -2,
-                Accidental::Flat => -1,
-                Accidental::Natural => 0,
-                Accidental::Sharp => 1,
-                Accidental::DoubleSharp => 2,
-            },
-        };
-
-        let midi_index =
-            69 + base_note_semitones.0 + accidental_offset + (base_note_semitones.1 - 4) * 12;
-        if midi_index < 0 || midi_index >= MIDI_FREQUENCIES.len() as i32 {
+        let midi_index = self.to_midi_code() as usize;
+        if midi_index >= MIDI_FREQUENCIES.len() {
             U14F2::from_num(0.0) // or handle out-of-range index appropriately
         } else {
-            MIDI_FREQUENCIES[midi_index as usize]
+            MIDI_FREQUENCIES[midi_index]
         }
     }
+
+    pub fn lookup_increment_48000(&self) -> Option<I1F15> {
+        let midi_index = self.to_midi_code();
+        MIDI_INCREMENTS_48000.get(midi_index as usize).copied()
+    }
+
+    pub fn lookup_increment_44100(&self) -> Option<I1F15> {
+        let midi_index = self.to_midi_code();
+        MIDI_INCREMENTS_44100.get(midi_index as usize).copied()
+    }
+
+    pub fn lookup_increment_24000(&self) -> Option<I1F15> {
+        let midi_index = self.to_midi_code();
+        MIDI_INCREMENTS_24000.get(midi_index as usize).copied()
+    }
+
+    pub fn lookup_increment_12000(&self) -> Option<I1F15> {
+        let midi_index = self.to_midi_code();
+        MIDI_INCREMENTS_12000.get(midi_index as usize).copied()
+    }
+
     pub fn from_u8_flat(code: u8) -> Self {
         let (note, octave) = Note::midi_to_note_octave(code);
         match note {
@@ -1123,25 +1120,34 @@ impl Note {
         (note, octave)
     }
 
-    pub fn to_code(self) -> u8 {
-        let (note_value, octave, accidental) = match self {
-            Note::A(accidental, octave) => (9, octave, accidental),
-            Note::B(accidental, octave) => (11, octave, accidental),
-            Note::C(accidental, octave) => (0, octave, accidental),
-            Note::D(accidental, octave) => (2, octave, accidental),
-            Note::E(accidental, octave) => (4, octave, accidental),
-            Note::F(accidental, octave) => (5, octave, accidental),
-            Note::G(accidental, octave) => (7, octave, accidental),
+    pub fn to_midi_code(&self) -> u8 {
+        let base_note_semitones = match self {
+            Note::A(_, octave) => (0, *octave),
+            Note::B(_, octave) => (2, *octave),
+            Note::C(_, octave) => (-9, *octave),
+            Note::D(_, octave) => (-7, *octave),
+            Note::E(_, octave) => (-5, *octave),
+            Note::F(_, octave) => (-4, *octave),
+            Note::G(_, octave) => (-2, *octave),
         };
 
-        let note_value = match (note_value, accidental) {
-            (base, Accidental::Natural) => base,
-            (base, Accidental::Flat) => base - 1,
-            (base, Accidental::Sharp) => base + 1,
-            _ => panic!("Don't support double sharp/flat"),
+        let accidental_offset = match self {
+            Note::A(acc, _)
+            | Note::B(acc, _)
+            | Note::C(acc, _)
+            | Note::D(acc, _)
+            | Note::E(acc, _)
+            | Note::F(acc, _)
+            | Note::G(acc, _) => match acc {
+                Accidental::DoubleFlat => -2,
+                Accidental::Flat => -1,
+                Accidental::Natural => 0,
+                Accidental::Sharp => 1,
+                Accidental::DoubleSharp => 2,
+            },
         };
 
-        (octave + 1) as u8 * 12 + note_value
+        (69 + base_note_semitones.0 + accidental_offset + (base_note_semitones.1 - 4) * 12) as u8
     }
 }
 

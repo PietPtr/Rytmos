@@ -2,7 +2,8 @@ use std::sync::Once;
 
 use fixed::{
     traits::Fixed,
-    types::{I0F16, I14F2, I1F15, U14F2, U8F8},
+    types::{extra::U15, I0F16, I14F2, I1F15, U14F2, U8F8},
+    FixedU32,
 };
 use plotters::prelude::*;
 use rand::Rng;
@@ -274,7 +275,7 @@ fn try_fixed_crate() {
 }
 
 #[test]
-fn oh_no() {
+fn print_frequency_bit_consts() {
     let freqs: [U14F2; 128] = [
         U14F2::from_num(8.175799),
         U14F2::from_num(8.661957),
@@ -406,7 +407,29 @@ fn oh_no() {
         U14F2::from_num(12543.853951),
     ];
 
+    // Bit constants for frequency values
     for f in freqs {
         println!("U14F2::from_bits({:#018b}),", f.to_bits());
     }
+
+    // Bit constants for increments at the given sample rate.
+    let sample_rate = 12000;
+    for f in freqs {
+        let inc = if f < 10000 {
+            I1F15::from_num(FixedU32::<U15>::from(f) / FixedU32::<U15>::from_num(sample_rate))
+        } else {
+            I1F15::from_num(0)
+        };
+
+        println!("I1F15::from_bits({:#018b}),", inc.to_bits());
+    }
+}
+
+#[test]
+fn convert_i16_table_to_i1f15() {
+    println!("test");
+    // for sample in rytmos_synth::wavetables::SINE_WAVE {
+    //     let converted = I1F15::from_num(sample as f32 / i16::MAX as f32);
+    //     println!("{} -> {}", sample, converted);
+    // }
 }

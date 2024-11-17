@@ -87,7 +87,7 @@ pub struct ChromaticActionToCommand {
 
 impl ChromaticActionToCommand {
     pub fn new(string_tuning: Note) -> Self {
-        let code = string_tuning.to_code();
+        let code = string_tuning.to_midi_code();
         Self {
             notes: [
                 Note::from_u8_sharp(code),
