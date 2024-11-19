@@ -2,7 +2,7 @@ use std::sync::Once;
 
 use fixed::{
     traits::Fixed,
-    types::{extra::U15, I0F16, I14F2, I1F15, U14F2, U8F8},
+    types::{extra::U15, I0F16, I14F2, I1F15, U14F2, U4F4, U8F8},
     FixedU32,
 };
 use plotters::prelude::*;
@@ -173,11 +173,14 @@ fn init_logger() {
 fn test_sawtooth_synth() {
     init_logger();
 
-    let mut synth = SawtoothSynth::new(SawtoothSynthSettings {
-        decay: U8F8::from_num(0.90),
-    });
+    let mut synth = SawtoothSynth::new(
+        0x0,
+        SawtoothSynthSettings {
+            decay: U8F8::from_num(0.90),
+        },
+    );
 
-    synth.play(a!(4), U8F8::from_num(1.01));
+    synth.play(a!(4), U4F4::from_num(1.01));
 
     const LEN: usize = 44100;
 
@@ -226,19 +229,19 @@ fn test_command_serdes() {
 
     let mut valid_commands = 0;
 
-    for _ in 0..10000000 {
+    for i in 0..10000000 {
         let mut value: u32 = rng.gen();
         let command_id = rng.gen_range(0..8) & 0b111111;
 
-        value &= 0b00000011_11111111_11111111_11111111;
-        value |= command_id << 26;
+        value &= 0b11110000_00111111_11111111_11111111;
+        value |= command_id << 22;
 
         if let Some(cmd) = Command::deserialize(value) {
             valid_commands += 1;
             let serialized = cmd.serialize();
             assert_eq!(
                 value, serialized,
-                "Failed serdes test: {:#?} => \n{:032b} =/=\n{:032b}",
+                "Failed serdes test #{i}: {:#?} => \n{:032b} =/=\n{:032b}",
                 cmd, value, serialized
             );
         }
@@ -427,9 +430,8 @@ fn print_frequency_bit_consts() {
 
 #[test]
 fn convert_i16_table_to_i1f15() {
-    println!("test");
-    // for sample in rytmos_synth::wavetables::SINE_WAVE {
+    // for sample in rytmos_synth::synth::samples::weak::WEAK_WAV {
     //     let converted = I1F15::from_num(sample as f32 / i16::MAX as f32);
-    //     println!("{} -> {}", sample, converted);
+    //     println!("I1F15::from_bits({:#018b}),", converted.to_bits());
     // }
 }

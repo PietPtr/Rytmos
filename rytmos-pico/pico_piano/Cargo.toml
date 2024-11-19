@@ -27,4 +27,3 @@ rytmos-scribe = { path = "../../rytmos-scribe" }
 rytmos-synth = { path = "../../rytmos-synth" }
 rytmos-ui = { path = "../../rytmos-ui" }
 common = { path = "../common" }
-debouncr = "0.2.2"

@@ -1,11 +1,11 @@
 use std::sync::Once;
 
-use fixed::types::U8F8;
+use fixed::types::U4F4;
 use rytmos_engrave::{
     a, cis, dis,
     staff::{Duration, Music},
 };
-use rytmos_synth::commands::Command;
+use rytmos_synth::commands::CommandMessage;
 use rytmos_ui::synth_controller::{SynthController, SynthControllerSettings};
 
 static INIT: Once = Once::new();
@@ -40,7 +40,7 @@ fn test_command_for_time() {
 
     // Test different time values
     let _test_cases = vec![
-        (0, Some(Command::Play(a!(3), U8F8::from_num(1.)))),
+        (0, Some(CommandMessage::Play(a!(3), U4F4::from_num(1.)))),
         (1, None),
         (2, None),
         (3, None),
@@ -48,11 +48,11 @@ fn test_command_for_time() {
         (5, None),
         (6, None),
         (7, None),
-        (32, Some(Command::Play(cis!(4), U8F8::from_num(1.)))),
+        (32, Some(CommandMessage::Play(cis!(4), U4F4::from_num(1.)))),
         (33, None),
         (40, None),
         (45, None),
-        (48, Some(Command::Play(dis!(4), U8F8::from_num(1.)))),
+        (48, Some(CommandMessage::Play(dis!(4), U4F4::from_num(1.)))),
     ];
 
     println!("----");

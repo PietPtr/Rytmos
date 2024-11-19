@@ -9,11 +9,13 @@ pub static BOOT2_FIRMWARE: [u8; 256] = rp2040_boot2::BOOT_LOADER_W25Q080;
 use core::cell::RefCell;
 use core::u32;
 
+use common::debouncer::Debouncer;
 use cortex_m::{interrupt::Mutex, singleton};
-use debouncr::debounce_16;
 use defmt::*;
 use defmt_rtt as _;
 use embedded_hal::digital::v2::InputPin;
+use fixed::traits::Fixed;
+use fixed::types::U4F4;
 use fixed::types::U8F8;
 use fugit::Duration;
 use fugit::HertzU32;
@@ -38,6 +40,8 @@ use rp_pico::{
 };
 
 use rytmos_engrave::{a, ais, b, c, cis, d, dis, e, f, fis, g, gis};
+use rytmos_synth::commands::CommandMessage;
+use rytmos_synth::synth::metronome::MetronomeSynth;
 use rytmos_synth::{
     commands::Command,
     synth::{
@@ -111,9 +115,12 @@ fn synth_core(sys_freq: u32) -> ! {
 
     info!("Start Synth core.");
 
-    let mut synth = SawtoothSynth::new(SawtoothSynthSettings {
+    let sawtoonth_settings = SawtoothSynthSettings {
         decay: U8F8::from_num(0.9),
-    });
+    };
+    let mut synth = SawtoothSynth::new(0x0, sawtoonth_settings);
+
+    let mut metronome = MetronomeSynth::new(0x1);
 
     let mut sample = 0i16;
 
@@ -211,22 +218,51 @@ fn main() -> ! {
     let fn2_pin = pins.gpio2.into_pull_up_input();
     let fn3_pin = pins.gpio3.into_pull_up_input();
 
-    // TODO: implement own debouncer based on counting because 16 is too short.
-    let mut fn0_debouncer = debounce_16(false);
-    let mut fn1_debouncer = debounce_16(false);
-    let mut fn2_debouncer = debounce_16(false);
-    let mut fn3_debouncer = debounce_16(false);
+    const DEBOUNCE_TIME: u32 = 500;
+    let mut fn0_debouncer = Debouncer::new(DEBOUNCE_TIME);
+    let mut fn1_debouncer = Debouncer::new(DEBOUNCE_TIME);
+    let mut fn2_debouncer = Debouncer::new(DEBOUNCE_TIME);
+    let mut fn3_debouncer = Debouncer::new(DEBOUNCE_TIME);
+
+    let mut c_debouncer = Debouncer::new(DEBOUNCE_TIME);
+    let mut cis_debouncer = Debouncer::new(DEBOUNCE_TIME);
+    let mut d_debouncer = Debouncer::new(DEBOUNCE_TIME);
+    let mut dis_debouncer = Debouncer::new(DEBOUNCE_TIME);
+    let mut e_debouncer = Debouncer::new(DEBOUNCE_TIME);
+    let mut f_debouncer = Debouncer::new(DEBOUNCE_TIME);
+    let mut fis_debouncer = Debouncer::new(DEBOUNCE_TIME);
+    let mut g_debouncer = Debouncer::new(DEBOUNCE_TIME);
+    let mut gis_debouncer = Debouncer::new(DEBOUNCE_TIME);
+    let mut a_debouncer = Debouncer::new(DEBOUNCE_TIME);
+    let mut ais_debouncer = Debouncer::new(DEBOUNCE_TIME);
+    let mut b_debouncer = Debouncer::new(DEBOUNCE_TIME);
 
     info!("Start I/O thread.");
 
     let mut octave = 4;
-    let mut button_states = [false; 16];
+    let attack_scaler: U4F4 = U4F4::from_num(1.2);
+    let mut attack = U4F4::from_num(2.0);
+
+    let mut button_states = [false; 12];
 
     loop {
         fn0_debouncer.update(fn0_pin.is_low().unwrap());
         fn1_debouncer.update(fn1_pin.is_low().unwrap());
         fn2_debouncer.update(fn2_pin.is_low().unwrap());
         fn3_debouncer.update(fn3_pin.is_low().unwrap());
+
+        c_debouncer.update(c_pin.is_low().unwrap());
+        cis_debouncer.update(cis_pin.is_low().unwrap());
+        d_debouncer.update(d_pin.is_low().unwrap());
+        dis_debouncer.update(dis_pin.is_low().unwrap());
+        e_debouncer.update(e_pin.is_low().unwrap());
+        f_debouncer.update(f_pin.is_low().unwrap());
+        fis_debouncer.update(fis_pin.is_low().unwrap());
+        g_debouncer.update(g_pin.is_low().unwrap());
+        gis_debouncer.update(gis_pin.is_low().unwrap());
+        a_debouncer.update(a_pin.is_low().unwrap());
+        ais_debouncer.update(ais_pin.is_low().unwrap());
+        b_debouncer.update(b_pin.is_low().unwrap());
 
         let new_button_states = [
             c_pin.is_low().unwrap(),
@@ -241,45 +277,45 @@ fn main() -> ! {
             a_pin.is_low().unwrap(),
             ais_pin.is_low().unwrap(),
             b_pin.is_low().unwrap(),
-            fn0_debouncer.is_high(),
-            fn1_debouncer.is_high(),
-            fn2_debouncer.is_high(),
-            fn3_debouncer.is_high(),
         ];
 
-        let command = if new_button_states[NOTE_C] && !button_states[NOTE_C] {
-            Some(Command::Play(c!(octave), U8F8::from_num(1.0)))
+        let message = if new_button_states[NOTE_C] && !button_states[NOTE_C] {
+            Some(CommandMessage::Play(c!(octave), U4F4::from_num(attack)))
         } else if new_button_states[NOTE_CIS] && !button_states[NOTE_CIS] {
-            Some(Command::Play(cis!(octave), U8F8::from_num(1.0)))
+            Some(CommandMessage::Play(cis!(octave), U4F4::from_num(attack)))
         } else if new_button_states[NOTE_D] && !button_states[NOTE_D] {
-            Some(Command::Play(d!(octave), U8F8::from_num(1.0)))
+            Some(CommandMessage::Play(d!(octave), U4F4::from_num(attack)))
         } else if new_button_states[NOTE_DIS] && !button_states[NOTE_DIS] {
-            Some(Command::Play(dis!(octave), U8F8::from_num(1.0)))
+            Some(CommandMessage::Play(dis!(octave), U4F4::from_num(attack)))
         } else if new_button_states[NOTE_E] && !button_states[NOTE_E] {
-            Some(Command::Play(e!(octave), U8F8::from_num(1.0)))
+            Some(CommandMessage::Play(e!(octave), U4F4::from_num(attack)))
         } else if new_button_states[NOTE_F] && !button_states[NOTE_F] {
-            Some(Command::Play(f!(octave), U8F8::from_num(1.0)))
+            Some(CommandMessage::Play(f!(octave), U4F4::from_num(attack)))
         } else if new_button_states[NOTE_FIS] && !button_states[NOTE_FIS] {
-            Some(Command::Play(fis!(octave), U8F8::from_num(1.0)))
+            Some(CommandMessage::Play(fis!(octave), U4F4::from_num(attack)))
         } else if new_button_states[NOTE_G] && !button_states[NOTE_G] {
-            Some(Command::Play(g!(octave), U8F8::from_num(1.0)))
+            Some(CommandMessage::Play(g!(octave), U4F4::from_num(attack)))
         } else if new_button_states[NOTE_GIS] && !button_states[NOTE_GIS] {
-            Some(Command::Play(gis!(octave), U8F8::from_num(1.0)))
+            Some(CommandMessage::Play(gis!(octave), U4F4::from_num(attack)))
         } else if new_button_states[NOTE_A] && !button_states[NOTE_A] {
-            Some(Command::Play(a!(octave), U8F8::from_num(1.0)))
+            Some(CommandMessage::Play(a!(octave), U4F4::from_num(attack)))
         } else if new_button_states[NOTE_AIS] && !button_states[NOTE_AIS] {
-            Some(Command::Play(ais!(octave), U8F8::from_num(1.0)))
+            Some(CommandMessage::Play(ais!(octave), U4F4::from_num(attack)))
         } else if new_button_states[NOTE_B] && !button_states[NOTE_B] {
-            Some(Command::Play(b!(octave), U8F8::from_num(1.0)))
+            Some(CommandMessage::Play(b!(octave), U4F4::from_num(attack)))
         } else if button_states.iter().take(12).any(|&b| b)
             && new_button_states.iter().take(12).all(|b| !b)
         {
-            Some(Command::Play(c!(0), U8F8::from_num(0.0)))
+            Some(CommandMessage::Play(c!(0), U4F4::from_num(0.0)))
         } else {
             None
         };
 
-        if let Some(command) = command {
+        if let Some(message) = message {
+            let command = Command {
+                address: 0x0,
+                message,
+            };
             let command_serialized = command.serialize();
 
             cortex_m::interrupt::free(|cs| {
@@ -289,17 +325,36 @@ fn main() -> ! {
             });
         }
 
-        if button_states[FN_0] {
+        if let Ok(true) = fn0_debouncer.is_high() {
             octave = 4
-        } else if button_states[FN_2] {
+        } else if let Ok(true) = fn2_debouncer.is_high() {
             octave = 2
         } else {
             octave = 3
         }
 
+        if let Ok(true) = fn1_debouncer.is_high() {
+            if cis_debouncer.stable_rising_edge() {
+                let new_attack = attack.saturating_mul(attack_scaler);
+                if new_attack == attack && new_attack != U4F4::MAX {
+                    attack = U4F4::from_bits(attack.to_bits() + 1);
+                } else {
+                    attack = new_attack
+                }
+                info!("Attack: {}", attack.to_bits());
+            }
+            if c_debouncer.stable_rising_edge() {
+                attack = attack
+                    .saturating_div(attack_scaler)
+                    .max(U4F4::from_bits(0b1));
+                info!("Attack: {}", attack.to_bits());
+            }
+        }
+
         button_states = new_button_states;
     }
 }
+
 const NOTE_C: usize = 0;
 const NOTE_CIS: usize = 1;
 const NOTE_D: usize = 2;

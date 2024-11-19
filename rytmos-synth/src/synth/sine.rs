@@ -1,4 +1,4 @@
-use fixed::types::{I1F15, U8F8};
+use fixed::types::{I1F15, U4F4, U8F8};
 use log::*;
 
 use crate::{commands::Command, wavetables::SINE_WAVE};
@@ -6,6 +6,7 @@ use crate::{commands::Command, wavetables::SINE_WAVE};
 use super::{run_play_command, Synth, SAMPLE_RATE};
 
 pub struct SineSynth {
+    address: u32,
     settings: SineSynthSettings,
     frequency: f32,
     phase: f32,
@@ -13,8 +14,9 @@ pub struct SineSynth {
 }
 
 impl SineSynth {
-    pub fn new(settings: SineSynthSettings) -> Self {
+    pub fn new(address: u32, settings: SineSynthSettings) -> Self {
         Self {
+            address,
             settings,
             frequency: 0.,
             phase: settings.initial_phase,
@@ -45,7 +47,7 @@ impl SineSynth {
 
 #[derive(Clone, Copy, Debug)]
 pub struct SineSynthSettings {
-    pub attack_gain: U8F8,
+    pub attack_gain: U4F4,
     pub initial_phase: f32,
     pub decay_per_second: f32,
 }
@@ -57,7 +59,7 @@ impl Synth for SineSynth {
         self.settings = settings
     }
 
-    fn play(&mut self, note: rytmos_engrave::staff::Note, velocity: U8F8) {
+    fn play(&mut self, note: rytmos_engrave::staff::Note, velocity: U4F4) {
         self.frequency = note.frequency();
         // self.gain = velocity * self.settings.attack_gain;
     }
@@ -102,11 +104,9 @@ impl Synth for SineSynth {
 
     fn run_command(&mut self, command: Command) {
         run_play_command(self, command);
+    }
 
-        #[allow(clippy::single_match)]
-        match command {
-            Command::SetAttack(attack) => self.settings.attack_gain = attack,
-            _ => (),
-        }
+    fn address(&self) -> u32 {
+        self.address
     }
 }

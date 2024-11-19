@@ -3,7 +3,7 @@ use embedded_graphics::{
     prelude::{DrawTarget, Point},
 };
 use heapless::Vec;
-use rytmos_synth::commands::Command;
+use rytmos_synth::commands::{Command, CommandMessage};
 
 use crate::{
     interface::IOState,
@@ -216,7 +216,7 @@ impl BareMenu {
         self.last_state = state;
     }
 
-    pub(crate) fn next_command(&mut self) -> Vec<Command, 4> {
+    pub(crate) fn next_command(&mut self) -> Vec<CommandMessage, 4> {
         self.synth_controller.next_command()
     }
 

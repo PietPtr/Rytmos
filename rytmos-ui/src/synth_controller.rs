@@ -1,8 +1,8 @@
-use fixed::types::U8F8;
+use fixed::types::U4F4;
 use heapless::Vec;
 use log::info;
 use rytmos_engrave::{c, staff::Music};
-use rytmos_synth::commands::Command;
+use rytmos_synth::commands::{Command, CommandMessage};
 
 #[derive(Debug, Default, Clone, Copy)]
 pub struct SynthControllerSettings {
@@ -89,7 +89,7 @@ impl SynthController {
         self.state
     }
 
-    pub fn next_command(&mut self) -> Vec<Command, 4> {
+    pub fn next_command(&mut self) -> Vec<CommandMessage, 4> {
         let commands = self.command_for_time();
 
         if self.state == SynthControllerState::Playing {
@@ -103,7 +103,7 @@ impl SynthController {
         (self.time % 16) as f64 / 4.
     }
 
-    pub fn command_for_time(&mut self) -> Vec<Command, 4> {
+    pub fn command_for_time(&mut self) -> Vec<CommandMessage, 4> {
         if !self.settings.play_pattern || self.state == SynthControllerState::Stopped {
             return Vec::new();
         }
@@ -119,9 +119,9 @@ impl SynthController {
 
         if self.settings.metronome {
             if beat == 0.0 {
-                commands.push(Command::Tick(true)).unwrap();
+                commands.push(CommandMessage::Tick(true)).unwrap();
             } else if [1.0, 2.0, 3.0].contains(&beat) {
-                commands.push(Command::Tick(false)).unwrap();
+                commands.push(CommandMessage::Tick(false)).unwrap();
             }
         }
 
@@ -130,7 +130,7 @@ impl SynthController {
                 Music::Note(note, dur) => {
                     if t16 == count16 as f64 && !last_was_tie {
                         commands
-                            .push(Command::Play(note, U8F8::from_num(1.)))
+                            .push(CommandMessage::Play(note, U4F4::from_num(1.)))
                             .unwrap();
                         break;
                     }
@@ -140,7 +140,7 @@ impl SynthController {
                 Music::Rest(dur) => {
                     if t16 == count16 as f64 && !last_was_tie {
                         commands
-                            .push(Command::Play(c!(0), U8F8::from_num(0.)))
+                            .push(CommandMessage::Play(c!(0), U4F4::from_num(0.)))
                             .unwrap();
                         break;
                     }

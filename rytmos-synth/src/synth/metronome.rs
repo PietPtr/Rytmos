@@ -1,4 +1,4 @@
-use fixed::types::{I1F15, U8F8};
+use fixed::types::{I1F15, U4F4, U8F8};
 use log::info;
 use rytmos_engrave::staff::{Accidental, Note};
 
@@ -11,8 +11,9 @@ use super::{
 
 pub struct MetronomeSynth {
     sample: usize,
-    velocity: U8F8,
+    velocity: U4F4,
     play_sample: Option<Sample>,
+    address: u32,
 }
 
 enum Sample {
@@ -21,18 +22,13 @@ enum Sample {
 }
 
 impl MetronomeSynth {
-    pub fn new() -> Self {
+    pub fn new(address: u32) -> Self {
         Self {
+            address,
             sample: 0,
-            velocity: 0.into(),
+            velocity: U4F4::from_num(0),
             play_sample: None,
         }
-    }
-}
-
-impl Default for MetronomeSynth {
-    fn default() -> Self {
-        Self::new()
     }
 }
 
@@ -43,7 +39,7 @@ impl Synth for MetronomeSynth {
 
     /// Ignores the frequency of the note and plays the metronome at the given velocity as amplifier
     /// with the set BPM.
-    fn play(&mut self, note: Note, velocity: U8F8) {
+    fn play(&mut self, note: Note, velocity: U4F4) {
         self.velocity = velocity;
 
         match note {
@@ -64,7 +60,7 @@ impl Synth for MetronomeSynth {
                     Some(sample) => *sample,
                     None => {
                         self.play_sample = None; // Exhausted audio fragment.
-                        0
+                        I1F15::from_num(0)
                     }
                 }
             }
@@ -76,18 +72,21 @@ impl Synth for MetronomeSynth {
                     Some(sample) => *sample,
                     None => {
                         self.play_sample = None;
-                        0
+                        I1F15::from_num(0)
                     }
                 }
             }
-            None => 0,
+            None => I1F15::from_num(0),
         };
 
-        // (sample as f32 * self.velocity) as i16
-        todo!()
+        sample
     }
 
     fn run_command(&mut self, command: Command) {
         super::run_play_command(self, command);
+    }
+
+    fn address(&self) -> u32 {
+        self.address
     }
 }

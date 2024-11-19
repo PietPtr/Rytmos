@@ -1,6 +1,6 @@
 // Generic synth that can be reconfigured at runtime using commands.
 
-use fixed::types::{I1F15, U8F8};
+use fixed::types::{I1F15, U4F4};
 use rytmos_engrave::staff::Note;
 
 use crate::commands::Command;
@@ -16,63 +16,71 @@ use super::{
 /// Contains a simple overtone synth defined at construction and a metronome.
 /// Handles all commands
 pub struct OvertoneAndMetronomeSynth {
+    address: u32,
     synth: OvertoneSynth<VibratoSynth, 4>,
     metronome: MetronomeSynth,
 }
 
 impl OvertoneAndMetronomeSynth {
-    pub fn new() -> Self {
+    pub fn new(address: u32) -> Self {
         let synths = [
-            VibratoSynth::new(VibratoSynthSettings {
-                sine_settings: SineSynthSettings {
-                    attack_gain: U8F8::from_num(0.38),
-                    initial_phase: 0.13,
-                    decay_per_second: 0.5,
+            VibratoSynth::new(
+                address,
+                VibratoSynthSettings {
+                    sine_settings: SineSynthSettings {
+                        attack_gain: U4F4::from_num(0.38),
+                        initial_phase: 0.13,
+                        decay_per_second: 0.5,
+                    },
+                    vibrato_frequency: 10.,
+                    vibrato_strength: 0.0001,
                 },
-                vibrato_frequency: 10.,
-                vibrato_strength: 0.0001,
-            }),
-            VibratoSynth::new(VibratoSynthSettings {
-                sine_settings: SineSynthSettings {
-                    attack_gain: U8F8::from_num(0.4),
-                    initial_phase: 0.77,
-                    decay_per_second: 0.6,
+            ),
+            VibratoSynth::new(
+                address,
+                VibratoSynthSettings {
+                    sine_settings: SineSynthSettings {
+                        attack_gain: U4F4::from_num(0.4),
+                        initial_phase: 0.77,
+                        decay_per_second: 0.6,
+                    },
+                    vibrato_frequency: 10.,
+                    vibrato_strength: 0.0001,
                 },
-                vibrato_frequency: 10.,
-                vibrato_strength: 0.0001,
-            }),
-            VibratoSynth::new(VibratoSynthSettings {
-                sine_settings: SineSynthSettings {
-                    attack_gain: U8F8::from_num(0.34),
-                    initial_phase: 0.21,
-                    decay_per_second: 0.5,
+            ),
+            VibratoSynth::new(
+                address,
+                VibratoSynthSettings {
+                    sine_settings: SineSynthSettings {
+                        attack_gain: U4F4::from_num(0.34),
+                        initial_phase: 0.21,
+                        decay_per_second: 0.5,
+                    },
+                    vibrato_frequency: 10.,
+                    vibrato_strength: 0.0001,
                 },
-                vibrato_frequency: 10.,
-                vibrato_strength: 0.0001,
-            }),
-            VibratoSynth::new(VibratoSynthSettings {
-                sine_settings: SineSynthSettings {
-                    attack_gain: U8F8::from_num(0.02),
-                    initial_phase: 0.29,
-                    decay_per_second: 0.4,
+            ),
+            VibratoSynth::new(
+                address,
+                VibratoSynthSettings {
+                    sine_settings: SineSynthSettings {
+                        attack_gain: U4F4::from_num(0.02),
+                        initial_phase: 0.29,
+                        decay_per_second: 0.4,
+                    },
+                    vibrato_frequency: 10.,
+                    vibrato_strength: 0.0001,
                 },
-                vibrato_frequency: 10.,
-                vibrato_strength: 0.0001,
-            }),
+            ),
         ];
 
-        let synth = OvertoneSynth::new(OvertoneSynthSettings {}, synths);
+        let synth = OvertoneSynth::new(address, OvertoneSynthSettings {}, synths);
 
         Self {
+            address,
             synth,
-            metronome: MetronomeSynth::new(),
+            metronome: MetronomeSynth::new(address),
         }
-    }
-}
-
-impl Default for OvertoneAndMetronomeSynth {
-    fn default() -> Self {
-        Self::new()
     }
 }
 
@@ -83,7 +91,7 @@ impl Synth for OvertoneAndMetronomeSynth {
     // Settings can only be changed through commands
     fn configure(&mut self, _settings: Self::Settings) {}
 
-    fn play(&mut self, note: Note, velocity: U8F8) {
+    fn play(&mut self, note: Note, velocity: U4F4) {
         self.synth.play(note, velocity);
     }
 
@@ -111,5 +119,9 @@ impl Synth for OvertoneAndMetronomeSynth {
         //     }
         //     Command::SetTempo(_) => todo!(),
         // }
+    }
+
+    fn address(&self) -> u32 {
+        self.address
     }
 }

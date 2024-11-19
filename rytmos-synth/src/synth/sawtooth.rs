@@ -1,6 +1,6 @@
 use fixed::{
     traits::ToFixed,
-    types::{extra::U15, I1F15, U8F8},
+    types::{extra::U15, I1F15, U4F4, U8F8},
     FixedI32,
 };
 
@@ -9,6 +9,7 @@ use crate::commands::Command;
 use super::{run_play_command, Synth};
 
 pub struct SawtoothSynth {
+    address: u32,
     settings: SawtoothSynthSettings,
     increment: I1F15, // Computed from frequency
     sample: I1F15, // store the sample way more precise than needed so we can do more exact increments
@@ -17,9 +18,10 @@ pub struct SawtoothSynth {
 }
 
 impl SawtoothSynth {
-    pub fn new(settings: SawtoothSynthSettings) -> Self {
+    pub fn new(address: u32, settings: SawtoothSynthSettings) -> Self {
         log::info!("Sawtooth Settings: {settings:?}");
         Self {
+            address,
             settings,
             increment: I1F15::from_num(0),
             sample: I1F15::from_num(0),
@@ -41,8 +43,8 @@ impl Synth for SawtoothSynth {
         self.settings = settings
     }
 
-    fn play(&mut self, note: rytmos_engrave::staff::Note, velocity: U8F8) {
-        self.velocity = velocity;
+    fn play(&mut self, note: rytmos_engrave::staff::Note, velocity: U4F4) {
+        self.velocity = velocity.into();
         self.increment = note.lookup_increment_24000().unwrap_or_else(|| {
             log::error!("Failed to lookup increment");
             I1F15::from_num(0)
@@ -62,7 +64,7 @@ impl Synth for SawtoothSynth {
 
         if self.sample_counter == 1000 {
             self.sample_counter = 0;
-            self.velocity *= self.settings.decay;
+            self.velocity = (self.velocity * self.settings.decay).max(U8F8::from_num(0))
         }
 
         out_sample
@@ -70,13 +72,9 @@ impl Synth for SawtoothSynth {
 
     fn run_command(&mut self, command: Command) {
         run_play_command(self, command);
+    }
 
-        #[allow(clippy::single_match)]
-        match command {
-            Command::SetAttack(_attack) => {
-                // self.settings.attack_gain = (attack as u32 * 256) as f32 * scale as f32
-            }
-            _ => (),
-        }
+    fn address(&self) -> u32 {
+        self.address
     }
 }

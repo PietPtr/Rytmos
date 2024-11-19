@@ -1574,7 +1574,7 @@
 		(descr "Through hole straight socket strip, 1x03, 2.54mm pitch, single row (from Kicad 4.0.7), script generated")
 		(tags "Through hole socket strip THT 1x03 2.54mm single row")
 		(property "Reference" "DBG1"
-			(at 0 -2.77 360)
+			(at 0 -2.77 0)
 			(layer "F.SilkS")
 			(hide yes)
 			(uuid "671c97c4-fa61-4972-8847-e0a54fbba0af")
@@ -1586,7 +1586,7 @@
 			)
 		)
 		(property "Value" "Conn_01x03_Pin"
-			(at 0 7.85 360)
+			(at 0 7.85 0)
 			(layer "F.Fab")
 			(uuid "f1d153df-fa41-4ec2-8bcf-d052d721a74b")
 			(effects
@@ -8169,7 +8169,7 @@
 	(footprint "rytmos:PCM5102_BREAKOUT"
 		(layer "F.Cu")
 		(uuid "f9a0dfa5-8dbc-425c-bb80-692b25524873")
-		(at 166.365 63.016)
+		(at 177.365 63.394)
 		(property "Reference" "DAC1"
 			(at 0 -8 0)
 			(unlocked yes)
@@ -8371,7 +8371,7 @@
 	(footprint "Package_TO_SOT_THT:TO-220-3_Horizontal_TabDown"
 		(layer "B.Cu")
 		(uuid "a10fea0d-2477-491e-b9f8-99f16f660aa8")
-		(at 160.17 33.25)
+		(at 159.96 33.77)
 		(descr "TO-220-3, Horizontal, RM 2.54mm, see https://www.vishay.com/docs/66542/to-220-1.pdf")
 		(tags "TO-220-3 Horizontal RM 2.54mm")
 		(property "Reference" "POWER1"

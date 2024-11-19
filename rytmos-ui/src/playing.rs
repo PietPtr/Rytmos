@@ -1,6 +1,6 @@
-use fixed::types::U8F8;
+use fixed::types::U4F4;
 use rytmos_engrave::{c, staff::Note};
-use rytmos_synth::commands::Command;
+use rytmos_synth::commands::{Command, CommandMessage};
 
 use crate::interface::PlayingButtons;
 
@@ -77,7 +77,7 @@ impl Default for FrettingAndPlucking {
 }
 
 pub trait ActionToCommand {
-    fn translate(&self, play_action: PlayAction) -> Option<Command>;
+    fn translate(&self, play_action: PlayAction) -> Option<CommandMessage>;
 }
 
 // Simple translation that maps the fret buttons to the first four frets of the given "string" (note).
@@ -101,7 +101,7 @@ impl ChromaticActionToCommand {
 }
 
 impl ActionToCommand for ChromaticActionToCommand {
-    fn translate(&self, play_action: PlayAction) -> Option<Command> {
+    fn translate(&self, play_action: PlayAction) -> Option<CommandMessage> {
         let note = match play_action {
             PlayAction::Mute => c!(0),
             PlayAction::PlayOpen => self.notes[0],
@@ -112,11 +112,11 @@ impl ActionToCommand for ChromaticActionToCommand {
         };
 
         let velocity = if play_action == PlayAction::Mute {
-            U8F8::from_num(0.)
+            U4F4::from_num(0.)
         } else {
-            U8F8::from_num(1.)
+            U4F4::from_num(1.)
         };
 
-        Some(Command::Play(note, velocity))
+        Some(CommandMessage::Play(note, velocity))
     }
 }

@@ -9,7 +9,7 @@ use rytmos_engrave::{
     staff::{Clef, Music, Staff, StaffElement},
 };
 use rytmos_scribe::sixteen_switches::{MeasureState, RhythmDefinition, SwitchState};
-use rytmos_synth::commands::Command;
+use rytmos_synth::commands::{Command, CommandMessage};
 
 use crate::{
     // play_analysis::PlayAnalysis,
@@ -110,7 +110,7 @@ impl Interface {
 
     /// Read buttons and update states accordingly, returns synth commands that are based
     /// on user input and that have to be handled ASAP.
-    pub fn update_io_state(&mut self, new_state: IOState) -> Vec<Command, 4> {
+    pub fn update_io_state(&mut self, new_state: IOState) -> Vec<CommandMessage, 4> {
         self.io_state = new_state;
 
         self.states.set_all(new_state.toggle_switches);
@@ -132,7 +132,7 @@ impl Interface {
     /// Gets the next command for the synth, steps forward in sixteenth notes.
     /// This function is very timing sensitive and should be called in regular intervals,
     /// using timer functionality or the rhythm will not be correct.
-    pub fn next_synth_command(&mut self) -> Vec<Command, 4> {
+    pub fn next_synth_command(&mut self) -> Vec<CommandMessage, 4> {
         self.menu.next_command()
     }
 
