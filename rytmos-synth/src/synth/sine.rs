@@ -9,7 +9,7 @@ pub struct SineSynth {
     address: u32,
     settings: SineSynthSettings,
     frequency: f32,
-    phase: f32,
+    phase: I1F15, // Between 0 and 1
     gain: f32,
 }
 
@@ -65,8 +65,7 @@ impl Synth for SineSynth {
     }
 
     fn next(&mut self) -> I1F15 {
-        todo!()
-        // let table_size = SINE_WAVE.len() as f32;
+        let table_size = SINE_WAVE.len() as f32;
 
         // let (sign, flip_index) = match self.phase {
         //     p if (0.00..0.25).contains(&p) => (1, false),
@@ -100,6 +99,7 @@ impl Synth for SineSynth {
         // self.gain *= self.decay();
 
         // sample
+        todo!()
     }
 
     fn run_command(&mut self, command: Command) {
