@@ -29,7 +29,7 @@ impl OvertoneAndMetronomeSynth {
                 VibratoSynthSettings {
                     sine_settings: SineSynthSettings {
                         attack_gain: U4F4::from_num(0.38),
-                        initial_phase: 0.13,
+                        initial_phase: todo!(),
                         decay_per_second: 0.5,
                     },
                     vibrato_frequency: 10.,
@@ -41,7 +41,7 @@ impl OvertoneAndMetronomeSynth {
                 VibratoSynthSettings {
                     sine_settings: SineSynthSettings {
                         attack_gain: U4F4::from_num(0.4),
-                        initial_phase: 0.77,
+                        initial_phase: todo!(),
                         decay_per_second: 0.6,
                     },
                     vibrato_frequency: 10.,
@@ -53,7 +53,7 @@ impl OvertoneAndMetronomeSynth {
                 VibratoSynthSettings {
                     sine_settings: SineSynthSettings {
                         attack_gain: U4F4::from_num(0.34),
-                        initial_phase: 0.21,
+                        initial_phase: todo!(),
                         decay_per_second: 0.5,
                     },
                     vibrato_frequency: 10.,
@@ -65,7 +65,7 @@ impl OvertoneAndMetronomeSynth {
                 VibratoSynthSettings {
                     sine_settings: SineSynthSettings {
                         attack_gain: U4F4::from_num(0.02),
-                        initial_phase: 0.29,
+                        initial_phase: todo!(),
                         decay_per_second: 0.4,
                     },
                     vibrato_frequency: 10.,

@@ -2,7 +2,7 @@ use std::sync::Once;
 
 use fixed::{
     traits::Fixed,
-    types::{extra::U15, I0F16, I14F2, I1F15, U14F2, U4F4, U8F8},
+    types::{extra::U15, I0F16, I14F2, I1F15, U14F2, U1F15, U4F4, U8F8},
     FixedU32,
 };
 use plotters::prelude::*;
@@ -30,30 +30,39 @@ fn init_logger() {
 }
 
 // TODO: repair all the synths
-// #[test]
-// fn test_sine_synth() {
-//     init_logger();
+#[test]
+fn test_sine_synth() {
+    init_logger();
 
-//     const SAMPLES: usize = 44100;
+    const SAMPLES: usize = 120100;
 
-//     let mut synth = SineSynth::new(SineSynthSettings {
-//         attack_gain: 0.9,
-//         initial_phase: 0.1,
-//         decay_per_second: 0.1,
-//     });
+    let mut synth = SineSynth::new(
+        0,
+        SineSynthSettings {
+            attack_gain: U4F4::from_num(0.9),
+            initial_phase: I1F15::from_num(0.),
+            decay_per_second: 0.1,
+        },
+    );
 
-//     let samples: Vec<i16> = (0..SAMPLES)
-//         .map(|i| {
-//             if i == 250 {
-//                 synth.play(a!(1), 1.2)
-//             }
-//             synth.next()
-//         })
-//         .collect();
+    let samples: Vec<i16> = (0..SAMPLES)
+        .map(|i| {
+            if i == 20 {
+                synth.play(c!(0), U4F4::from_num(1.2))
+            }
+            if i == 40000 {
+                synth.play(e!(4), U4F4::from_num(1.2))
+            }
+            if i == 80000 {
+                synth.play(g!(4), U4F4::from_num(1.2))
+            }
+            synth.next().to_bits()
+        })
+        .collect();
 
-//     plot_samples(&samples[..22000]).unwrap();
-//     export_to_wav(samples, "signal.wav");
-// }
+    plot_samples(&samples[..2400]).unwrap();
+    export_to_wav(samples, "signal.wav");
+}
 
 // #[test]
 // fn test_vibrato_synth() {
@@ -99,19 +108,24 @@ fn init_logger() {
 //     export_to_wav(samples, "signal.wav");
 // }
 
-// #[test]
-// fn test_metronome() {
-//     init_logger();
+#[test]
+fn test_metronome() {
+    init_logger();
 
-//     let mut synth = MetronomeSynth::new();
+    let mut synth = MetronomeSynth::new(0);
 
-//     synth.play(a!(0), 1.0);
+    let mut samples = vec![];
 
-//     let samples: Vec<i16> = (0..44100).map(|_| synth.next()).collect();
+    // TODO: broken?
+    for _ in 0..4 {
+        synth.play(a!(0), U4F4::from_num(1.0));
+        let mut samples_new: Vec<_> = (0..10000).map(|_| synth.next().to_bits()).collect();
+        samples.append(&mut samples_new);
+    }
 
-//     plot_samples(&samples[..44000]).unwrap();
-//     export_to_wav(samples, "signal.wav");
-// }
+    plot_samples(&samples[..40000]).unwrap();
+    export_to_wav(samples, "signal.wav");
+}
 
 // #[test]
 // fn test_overtone_synth() {
@@ -430,6 +444,7 @@ fn print_frequency_bit_consts() {
 
 #[test]
 fn convert_i16_table_to_i1f15() {
+    dbg!(I1F15::MIN, I1F15::MAX, I1F15::from_bits(1));
     // for sample in rytmos_synth::synth::samples::weak::WEAK_WAV {
     //     let converted = I1F15::from_num(sample as f32 / i16::MAX as f32);
     //     println!("I1F15::from_bits({:#018b}),", converted.to_bits());

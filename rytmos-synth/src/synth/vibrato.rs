@@ -30,7 +30,7 @@ impl VibratoSynth {
             address,
             SineSynthSettings {
                 attack_gain: U4F4::from_num(1u8),
-                initial_phase: 0.0,
+                initial_phase: todo!(),
                 decay_per_second: 1.0,
             },
         );

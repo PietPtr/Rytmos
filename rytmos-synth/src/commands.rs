@@ -1,4 +1,4 @@
-use fixed::types::{U4F4, U8F8};
+use fixed::types::U4F4; // TODO: maybe larger attack type? (U8F8 encoded with 12 bits, throwing away 4 F-bits?)
 use rytmos_engrave::staff::{Accidental, Note};
 
 /// Commands for synths that can be serialized in a u32 so the fit in a Pico's FIFO.
