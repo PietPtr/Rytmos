@@ -15,6 +15,7 @@ use defmt::*;
 use defmt_rtt as _;
 use embedded_hal::digital::v2::InputPin;
 use fixed::traits::Fixed;
+use fixed::types::I1F15;
 use fixed::types::U4F4;
 use fixed::types::U8F8;
 use fugit::Duration;
@@ -42,6 +43,8 @@ use rp_pico::{
 use rytmos_engrave::{a, ais, b, c, cis, d, dis, e, f, fis, g, gis};
 use rytmos_synth::commands::CommandMessage;
 use rytmos_synth::synth::metronome::MetronomeSynth;
+use rytmos_synth::synth::sine::SineSynth;
+use rytmos_synth::synth::sine::SineSynthSettings;
 use rytmos_synth::{
     commands::Command,
     synth::{
@@ -119,6 +122,14 @@ fn synth_core(sys_freq: u32) -> ! {
         decay: U8F8::from_num(0.9),
     };
     let mut synth = SawtoothSynth::new(0x0, sawtoonth_settings);
+    let mut synth = SineSynth::new(
+        0x0,
+        SineSynthSettings {
+            attack_gain: U4F4::from_num(1.0),
+            initial_phase: I1F15::MIN,
+            decay_per_second: 0.0,
+        },
+    );
 
     let mut metronome = MetronomeSynth::new(0x1);
 
@@ -141,9 +152,9 @@ fn synth_core(sys_freq: u32) -> ! {
         for (i, e) in next_tx_buf.iter_mut().enumerate() {
             if i % 2 == 0 {
                 sample = synth.next().to_bits();
-                *e = sample as u32 / 2;
+                *e = sample as u32 / 4;
             } else {
-                *e = sample as u32 / 2;
+                *e = sample as u32 / 4;
             }
             *e <<= 16;
         }
@@ -241,7 +252,7 @@ fn main() -> ! {
 
     let mut octave = 4;
     let attack_scaler: U4F4 = U4F4::from_num(1.2);
-    let mut attack = U4F4::from_num(2.0);
+    let mut attack = U4F4::from_num(1.0);
 
     let mut button_states = [false; 12];
 

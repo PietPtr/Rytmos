@@ -1,4 +1,8 @@
-use fixed::types::{I1F15, U4F4, U8F8};
+use fixed::{
+    traits::ToFixed,
+    types::{extra::U15, I1F15, U4F4, U8F8},
+    FixedI32,
+};
 use log::*;
 
 use crate::{commands::Command, wavetables::SINE_WAVE};
@@ -12,6 +16,7 @@ pub struct SineSynth {
     phase: I1F15, // -1 => -PI, 1 => PI
     phase_inc: I1F15,
     gain: u8,
+    velocity: U4F4,
 }
 
 impl SineSynth {
@@ -23,6 +28,7 @@ impl SineSynth {
             phase: settings.initial_phase,
             gain: 0,
             phase_inc: I1F15::from_bits(0),
+            velocity: Default::default(),
         }
     }
 
@@ -59,6 +65,7 @@ impl Synth for SineSynth {
 
     fn play(&mut self, note: rytmos_engrave::staff::Note, velocity: U4F4) {
         self.frequency = note.frequency();
+        self.velocity = velocity;
         // self.gain = velocity * self.settings.attack_gain;
 
         self.phase_inc = note.lookup_increment_24000().unwrap_or_else(|| {
@@ -113,7 +120,11 @@ impl Synth for SineSynth {
 
         (self.phase, _) = self.phase.overflowing_add(self.phase_inc);
 
-        sample
+        let out_sample = FixedI32::<U15>::from(sample)
+            .saturating_mul(FixedI32::<U15>::from(self.velocity))
+            .saturating_to_fixed::<I1F15>();
+
+        out_sample
     }
 
     fn run_command(&mut self, command: Command) {
