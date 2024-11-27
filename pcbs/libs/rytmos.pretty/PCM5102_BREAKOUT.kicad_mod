@@ -68,14 +68,14 @@
 	)
 	(attr through_hole)
 	(fp_line
-		(start -8.89 -30.988)
-		(end 8.89 -30.988)
+		(start -8.89 -33.02)
+		(end -8.89 -30.988)
 		(stroke
 			(width 0.1)
 			(type default)
 		)
 		(layer "F.SilkS")
-		(uuid "62d60757-7d56-4ccd-8581-43a91eb55c9b")
+		(uuid "88c3992c-391b-4072-b907-36c203b1206f")
 	)
 	(fp_line
 		(start -8.89 0)
@@ -98,6 +98,26 @@
 		(uuid "bc8840d9-0309-4db1-9d56-c3a8b89d1a0d")
 	)
 	(fp_line
+		(start 8.89 -33.02)
+		(end -8.89 -33.02)
+		(stroke
+			(width 0.1)
+			(type default)
+		)
+		(layer "F.SilkS")
+		(uuid "06981312-7532-4eec-8c86-d1b2bf16479c")
+	)
+	(fp_line
+		(start 8.89 -30.988)
+		(end 8.89 -33.02)
+		(stroke
+			(width 0.1)
+			(type default)
+		)
+		(layer "F.SilkS")
+		(uuid "9e10e0ec-8885-4fb0-aa84-3724509832a0")
+	)
+	(fp_line
 		(start 8.89 0)
 		(end 8.89 -30.988)
 		(stroke
@@ -108,29 +128,15 @@
 		(uuid "6b70fd3c-d675-4b9f-a8d9-e981e55338ea")
 	)
 	(fp_rect
-		(start -4.318 -28.194)
-		(end 10.16 -23.368)
+		(start -4.318 -28.956)
+		(end 8.89 -23.368)
 		(stroke
 			(width 0.1)
 			(type default)
 		)
 		(fill none)
 		(layer "F.SilkS")
-		(uuid "5a5a4424-cbb8-436d-8801-f06aec6e698f")
-	)
-	(fp_text user "TODO: print en test"
-		(at -5.08 -18.288 0)
-		(unlocked yes)
-		(layer "F.Cu")
-		(uuid "edac82cf-e94d-453f-8547-7a9c13d80a91")
-		(effects
-			(font
-				(size 1.5 1.5)
-				(thickness 0.3)
-				(bold yes)
-			)
-			(justify left bottom)
-		)
+		(uuid "a62416d2-b5e6-4a95-8d28-dded4c7e0b50")
 	)
 	(fp_text user "${REFERENCE}"
 		(at 0 -11.938 0)
