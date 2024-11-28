@@ -80,10 +80,10 @@ impl Synth for SineSynth {
         const OH_POINT_FIVE: I1F15 = I1F15::lit("0.5");
 
         let (sign, flip_index, modulo) = match self.phase {
-            p if p >= I1F15::MIN && p < -0.5 => (1, false, p + I1F15::MAX + I1F15::from_bits(1)), // +1
-            p if p >= -0.5 && p < 0.0 => (1, true, p + OH_POINT_FIVE),
-            p if p >= 0.0 && p < 0.5 => (-1, false, p),
-            p if p >= 0.5 && p <= I1F15::MAX => (-1, true, p - OH_POINT_FIVE),
+            p if p >= I1F15::MIN && p < -0.5 => (-1, false, p + I1F15::MAX + I1F15::from_bits(1)), // +1
+            p if p >= -0.5 && p < 0.0 => (-1, true, p + OH_POINT_FIVE),
+            p if p >= 0.0 && p < 0.5 => (1, false, p),
+            p if p >= 0.5 && p <= I1F15::MAX => (1, true, p - OH_POINT_FIVE),
             p => panic!("Impossible phase: {}", p),
         };
 
@@ -118,7 +118,7 @@ impl Synth for SineSynth {
         let sample = (Self::lerp(a, b, t) << self.gain) * sign;
         // let sample = a * sign;
 
-        (self.phase, _) = self.phase.overflowing_add(self.phase_inc);
+        (self.phase, _) = self.phase.overflowing_add(self.phase_inc * 2);
 
         let out_sample = FixedI32::<U15>::from(sample)
             .saturating_mul(FixedI32::<U15>::from(self.velocity))

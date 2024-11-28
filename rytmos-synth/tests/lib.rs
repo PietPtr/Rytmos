@@ -64,6 +64,69 @@ fn test_sine_synth() {
     export_to_wav(samples, "signal.wav");
 }
 
+fn calculate_errors(true_values: &[i16], approx_values: &[i16]) -> (f64, f64) {
+    let len = true_values.len();
+    let mut mae = 0.0;
+    let mut mse = 0.0;
+
+    for (&true_val, &approx_val) in true_values.iter().zip(approx_values.iter()) {
+        let error = (true_val as i32 - approx_val as i32) as f64;
+        mae += error.abs() as f64;
+        mse += error * error;
+    }
+
+    mae /= len as f64;
+    mse /= len as f64;
+    let rmse = mse.sqrt();
+
+    (mae, rmse)
+}
+
+#[test]
+fn test_sine_error() {
+    // TODO: verify if the sine generator generates the correct frequency, and finish this error thing
+    init_logger();
+
+    const SAMPLES: usize = 6400;
+
+    let mut synth = SineSynth::new(
+        0,
+        SineSynthSettings {
+            attack_gain: U4F4::from_num(1.),
+            initial_phase: I1F15::from_num(0.),
+            decay_per_second: 0.1,
+        },
+    );
+
+    let samples: Vec<i16> = (0..SAMPLES)
+        .map(|i| {
+            if i == 0 {
+                synth.play(a!(4), U4F4::from_num(1.0))
+            }
+            synth.next().to_bits()
+        })
+        .collect();
+
+    const SAMPLE_RATE: f64 = 24000.0;
+    const C0_FREQUENCY: f64 = 439.45; // TODO: calculate what this is due to fixed point stuff
+    const AMPLITUDE: i16 = (1. * i16::MAX as f64) as i16;
+
+    let sine_wave: Vec<i16> = (0..SAMPLES)
+        .map(|n| {
+            let theta = 2.0 * std::f64::consts::PI * C0_FREQUENCY * (n as f64) / SAMPLE_RATE;
+            (AMPLITUDE as f64 * theta.sin()).round() as i16
+        })
+        .collect();
+
+    plot_two_samples(&samples, &sine_wave).unwrap();
+    let (mae, mse) = calculate_errors(&sine_wave, &samples);
+
+    let mae = mae / 65536.;
+    let mse = mse / 65536.;
+
+    println!("MAE={mae} MSE={mse}");
+}
+
 // #[test]
 // fn test_vibrato_synth() {
 //     init_logger();
@@ -231,6 +294,47 @@ fn plot_samples(samples: &[i16]) -> Result<(), Box<dyn std::error::Error>> {
         ))?
         .label("Samples")
         .legend(|(x, y)| PathElement::new([(x, y), (x + 20, y)], BLUE));
+
+    chart.configure_series_labels().border_style(BLACK).draw()?;
+
+    Ok(())
+}
+
+fn plot_two_samples(samples1: &[i16], samples2: &[i16]) -> Result<(), Box<dyn std::error::Error>> {
+    let root = BitMapBackend::new("graph.png", (800, 600)).into_drawing_area();
+    root.fill(&WHITE)?;
+
+    let y_min = *samples1.iter().chain(samples2.iter()).min().unwrap() as i32;
+    let y_max = *samples1.iter().chain(samples2.iter()).max().unwrap() as i32;
+
+    let mut chart = ChartBuilder::on(&root)
+        .x_label_area_size(30)
+        .y_label_area_size(40)
+        .build_cartesian_2d(0..(samples1.len().max(samples2.len()) as i32), y_min..y_max)?;
+
+    chart.configure_mesh().draw()?;
+
+    chart
+        .draw_series(LineSeries::new(
+            samples1
+                .iter()
+                .enumerate()
+                .map(|(x, y)| (x as i32, *y as i32)),
+            &BLUE,
+        ))?
+        .label("Samples 1")
+        .legend(|(x, y)| PathElement::new([(x, y), (x + 20, y)], BLUE));
+
+    chart
+        .draw_series(LineSeries::new(
+            samples2
+                .iter()
+                .enumerate()
+                .map(|(x, y)| (x as i32, *y as i32)),
+            &RED,
+        ))?
+        .label("Samples 2")
+        .legend(|(x, y)| PathElement::new([(x, y), (x + 20, y)], RED));
 
     chart.configure_series_labels().border_style(BLACK).draw()?;
 
