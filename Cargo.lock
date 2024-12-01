@@ -258,6 +258,8 @@ version = "0.1.0"
 dependencies = [
  "defmt",
  "fugit",
+ "pio",
+ "pio-proc",
  "rp-pico",
 ]
 
@@ -911,6 +913,33 @@ name = "humantime"
 version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9a3a5bfb195931eeb336b2a7b4d761daec841b97f947d34394601737a7bba5e4"
+
+[[package]]
+name = "i2s-testbed"
+version = "0.1.0"
+dependencies = [
+ "common",
+ "cortex-m",
+ "cortex-m-rt",
+ "defmt",
+ "defmt-rtt",
+ "embedded-hal",
+ "fixed",
+ "fugit",
+ "heapless 0.7.17",
+ "libm",
+ "log",
+ "micromath",
+ "panic-probe",
+ "pio",
+ "pio-proc",
+ "rp-pico",
+ "rp2040-boot2",
+ "rytmos-engrave",
+ "rytmos-scribe",
+ "rytmos-synth",
+ "rytmos-ui",
+]
 
 [[package]]
 name = "iana-time-zone"

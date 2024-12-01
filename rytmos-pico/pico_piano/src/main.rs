@@ -9,7 +9,6 @@ pub static BOOT2_FIRMWARE: [u8; 256] = rp2040_boot2::BOOT_LOADER_W25Q080;
 use core::cell::RefCell;
 use core::u32;
 
-use common::debouncer::Debouncer;
 use cortex_m::{interrupt::Mutex, singleton};
 use defmt::*;
 use defmt_rtt as _;
@@ -52,6 +51,7 @@ use rytmos_synth::{
 };
 
 use common::consts::*;
+use common::debouncer::Debouncer;
 use common::plls;
 
 static mut CORE1_STACK: Stack<4096> = Stack::new();
@@ -124,9 +124,9 @@ fn synth_core(sys_freq: u32) -> ! {
     let mut synth = SineSynth::new(
         0x1,
         SineSynthSettings {
-            attack_gain: U4F4::from_num(1.0),
+            extra_attack_gain: U4F4::from_num(1.0),
+            decay: I1F15::from_num(0.001),
             initial_phase: I1F15::MIN,
-            decay: 0.0,
         },
     );
 

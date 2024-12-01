@@ -33,6 +33,7 @@ impl SawtoothSynth {
 
 #[derive(Clone, Copy, Debug)]
 pub struct SawtoothSynthSettings {
+    // TODO: see refactor in sine for implementing generic decay
     pub decay: U8F8,
 }
 
