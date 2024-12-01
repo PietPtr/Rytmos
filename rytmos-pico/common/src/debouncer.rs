@@ -34,7 +34,7 @@ impl Debouncer {
 
     pub fn is_high(&self) -> Result<bool, DebounceError> {
         if self.current_stable_time > self.goal_stable_time {
-            Ok(self.last_state == true)
+            Ok(self.last_state)
         } else {
             Err(DebounceError::NotStable(
                 self.goal_stable_time - self.current_stable_time,
@@ -44,7 +44,7 @@ impl Debouncer {
 
     pub fn is_low(&self) -> Result<bool, DebounceError> {
         if self.current_stable_time > self.goal_stable_time {
-            Ok(self.last_state == false)
+            Ok(!self.last_state)
         } else {
             Err(DebounceError::NotStable(
                 self.goal_stable_time - self.current_stable_time,
@@ -53,15 +53,8 @@ impl Debouncer {
     }
 
     pub fn stable_rising_edge(&self) -> bool {
-        // defmt::info!(
-        //     "currnt={} last={}",
-        //     self.current_stable_state,
-        //     self.last_stable_state,
-        // );
-        self.current_stable_state == true && self.last_stable_state == false
+        self.current_stable_state && !self.last_stable_state
     }
-
-    // pub fn stable_falling_edge(&self) -> bool {}
 }
 
 #[derive(Debug, defmt::Format)]

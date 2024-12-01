@@ -12,7 +12,7 @@ pub mod sawtooth;
 pub mod sine;
 pub mod vibrato;
 
-pub const SAMPLE_RATE: f32 = 44100.0;
+pub const SAMPLE_RATE: f32 = 24000.0;
 
 pub trait Synth {
     type Settings;

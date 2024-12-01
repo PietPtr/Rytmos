@@ -3,7 +3,7 @@ use embedded_graphics::{
     prelude::{DrawTarget, Point},
 };
 use heapless::Vec;
-use rytmos_synth::commands::{Command, CommandMessage};
+use rytmos_synth::commands::CommandMessage;
 
 use crate::{
     interface::IOState,

@@ -38,10 +38,11 @@ impl<S: Synth, const N: usize> Synth for OvertoneSynth<S, N> {
     }
 
     fn next(&mut self) -> I1F15 {
-        todo!()
-        // self.synths
-        //     .iter_mut()
-        //     .fold(0, |acc, synth| acc.saturating_add(synth.next()))
+        self.synths
+            .iter_mut()
+            .fold(I1F15::from_bits(0), |acc, synth| {
+                acc.saturating_add(synth.next())
+            })
     }
 
     fn run_command(&mut self, command: Command) {

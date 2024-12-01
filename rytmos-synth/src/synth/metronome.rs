@@ -1,11 +1,11 @@
-use fixed::types::{I1F15, U4F4, U8F8};
+use fixed::types::{I1F15, U4F4};
 use log::info;
 use rytmos_engrave::staff::{Accidental, Note};
 
 use crate::commands::Command;
 
 use super::{
-    samples::{strong::STRONG_WAV, weak::WEAK_WAV},
+    samples::{strong::STRONG_WAV_24000, weak::WEAK_WAV_24000},
     Synth,
 };
 
@@ -47,13 +47,15 @@ impl Synth for MetronomeSynth {
             Note::B(Accidental::Natural, _) => self.play_sample = Some(Sample::Weak),
             _ => info!("unknown metronome note {note:?}"),
         }
+
+        self.sample = 0
     }
 
     // This cannot be synced to anything. Change it such that play actually plays the sample and decides on emphasis based on note.
     fn next(&mut self) -> I1F15 {
         let sample = match self.play_sample {
             Some(Sample::Strong) => {
-                let sample_to_play = STRONG_WAV.get(self.sample);
+                let sample_to_play = STRONG_WAV_24000.get(self.sample);
                 self.sample += 1;
 
                 match sample_to_play {
@@ -65,7 +67,7 @@ impl Synth for MetronomeSynth {
                 }
             }
             Some(Sample::Weak) => {
-                let sample_to_play = WEAK_WAV.get(self.sample);
+                let sample_to_play = WEAK_WAV_24000.get(self.sample);
                 self.sample += 1;
 
                 match sample_to_play {

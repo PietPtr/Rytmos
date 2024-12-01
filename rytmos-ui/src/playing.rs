@@ -1,6 +1,6 @@
 use fixed::types::U4F4;
 use rytmos_engrave::{c, staff::Note};
-use rytmos_synth::commands::{Command, CommandMessage};
+use rytmos_synth::commands::CommandMessage;
 
 use crate::interface::PlayingButtons;
 

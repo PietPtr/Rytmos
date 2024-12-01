@@ -9,7 +9,7 @@ use rytmos_engrave::{
     staff::{Clef, Music, Staff, StaffElement},
 };
 use rytmos_scribe::sixteen_switches::{MeasureState, RhythmDefinition, SwitchState};
-use rytmos_synth::commands::{Command, CommandMessage};
+use rytmos_synth::commands::CommandMessage;
 
 use crate::{
     // play_analysis::PlayAnalysis,

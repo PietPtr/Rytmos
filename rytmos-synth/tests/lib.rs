@@ -1,8 +1,7 @@
 use std::sync::Once;
 
 use fixed::{
-    traits::Fixed,
-    types::{extra::U15, I0F16, I14F2, I1F15, U14F2, U1F15, U4F4, U8F8},
+    types::{extra::U15, I1F15, U14F2, U4F4, U8F8},
     FixedU32,
 };
 use plotters::prelude::*;
@@ -11,9 +10,10 @@ use rytmos_engrave::*;
 use rytmos_synth::{
     commands::Command,
     synth::{
-        lpf::LowPassFilter,
+        lpf::{compute_alpha, LowPassFilter},
         metronome::MetronomeSynth,
         overtone::{OvertoneSynth, OvertoneSynthSettings},
+        samples::weak::WEAK_WAV_44100,
         sawtooth::{SawtoothSynth, SawtoothSynthSettings},
         sine::{SineSynth, SineSynthSettings},
         vibrato::{VibratoSynth, VibratoSynthSettings},
@@ -39,28 +39,28 @@ fn test_sine_synth() {
     let mut synth = SineSynth::new(
         0,
         SineSynthSettings {
-            attack_gain: U4F4::from_num(0.9),
+            extra_attack_gain: U4F4::from_num(1.0),
             initial_phase: I1F15::from_num(0.),
-            decay_per_second: 0.1,
+            decay: I1F15::from_num(0.001),
         },
     );
 
     let samples: Vec<i16> = (0..SAMPLES)
         .map(|i| {
-            if i == 20 {
-                synth.play(c!(0), U4F4::from_num(1.2))
+            if i == 0 {
+                synth.play(c!(4), U4F4::from_num(2.9))
             }
             if i == 40000 {
-                synth.play(e!(4), U4F4::from_num(1.2))
+                synth.play(e!(4), U4F4::from_num(0.9))
             }
             if i == 80000 {
-                synth.play(g!(4), U4F4::from_num(1.2))
+                synth.play(g!(4), U4F4::from_num(0.9))
             }
             synth.next().to_bits()
         })
         .collect();
 
-    plot_samples(&samples[..2400]).unwrap();
+    plot_samples(&samples[..2000]).unwrap();
     export_to_wav(samples, "signal.wav");
 }
 
@@ -84,7 +84,6 @@ fn calculate_errors(true_values: &[i16], approx_values: &[i16]) -> (f64, f64) {
 
 #[test]
 fn test_sine_error() {
-    // TODO: verify if the sine generator generates the correct frequency, and finish this error thing
     init_logger();
 
     const SAMPLES: usize = 6400;
@@ -92,9 +91,9 @@ fn test_sine_error() {
     let mut synth = SineSynth::new(
         0,
         SineSynthSettings {
-            attack_gain: U4F4::from_num(1.),
+            extra_attack_gain: U4F4::from_num(1.0),
             initial_phase: I1F15::from_num(0.),
-            decay_per_second: 0.1,
+            decay: I1F15::from_num(0),
         },
     );
 
@@ -108,7 +107,7 @@ fn test_sine_error() {
         .collect();
 
     const SAMPLE_RATE: f64 = 24000.0;
-    const C0_FREQUENCY: f64 = 439.45; // TODO: calculate what this is due to fixed point stuff
+    const C0_FREQUENCY: f64 = 439.453124;
     const AMPLITUDE: i16 = (1. * i16::MAX as f64) as i16;
 
     let sine_wave: Vec<i16> = (0..SAMPLES)
@@ -127,49 +126,67 @@ fn test_sine_error() {
     println!("MAE={mae} MSE={mse}");
 }
 
-// #[test]
-// fn test_vibrato_synth() {
-//     init_logger();
+#[test]
+fn test_vibrato_synth() {
+    init_logger();
 
-//     let mut synth = VibratoSynth::new(VibratoSynthSettings {
-//         sine_settings: SineSynthSettings {
-//             attack_gain: 1.0,
-//             initial_phase: 0.0,
-//             decay_per_second: 1.0,
-//         },
-//         vibrato_frequency: 5.0,
-//         vibrato_strength: 0.0001,
-//     });
+    let mut synth = VibratoSynth::new(
+        0x0,
+        VibratoSynthSettings {
+            sine_settings: SineSynthSettings {
+                extra_attack_gain: U4F4::from_num(1.0),
+                initial_phase: I1F15::from_bits(0),
+                decay: I1F15::from_num(0.001),
+            },
+            vibrato_velocity: U4F4::from_num(1.),
+            vibrato_synth_divider: 7,
+            vibrato_strength: 5,
+        },
+    );
 
-//     synth.play(a!(4), 1.0);
+    synth.play(a!(4), U4F4::from_num(1.));
 
-//     let samples: Vec<i16> = (0..44100).map(|_| synth.next()).collect();
+    let samples: Vec<i16> = (0..44100).map(|_| synth.next().to_bits()).collect();
 
-//     plot_samples(&samples[..22000]).unwrap();
-//     export_to_wav(samples, "signal.wav");
-// }
+    plot_samples(&samples[..20000]).unwrap();
+    export_to_wav(samples, "signal.wav");
+}
 
-// #[test]
-// fn test_lpf() {
-//     init_logger();
+#[test]
+fn test_lpf() {
+    init_logger();
 
-//     // Run a very distorted sine synth
-//     let mut synth = SineSynth::new(SineSynthSettings {
-//         attack_gain: 5.0,
-//         initial_phase: 0.,
-//         decay_per_second: 0.2,
-//     });
+    // Run a very distorted sine synth
+    let mut synth = SineSynth::new(
+        0x0,
+        SineSynthSettings {
+            ..SineSynthSettings::default()
+        },
+    );
 
-//     // But filter it aggressively
-//     let mut lpf = LowPassFilter::new(250.);
+    // But filter it aggressively
+    let mut lpf = LowPassFilter::new(compute_alpha(250., 24000));
 
-//     synth.play(a!(0), 1.0);
+    synth.play(a!(1), U4F4::MAX);
 
-//     let samples: Vec<i16> = (0..44100).map(|_| lpf.next(synth.next())).collect();
+    let samples = (0..44100).map(|_| synth.next()).collect::<Vec<_>>();
 
-//     plot_samples(&samples[..22000]).unwrap();
-//     export_to_wav(samples, "signal.wav");
-// }
+    let filtered_samples = samples
+        .iter()
+        .map(|&s| lpf.next(s).to_bits())
+        .collect::<Vec<_>>();
+
+    const PLOT_AMOUNT: usize = 2000;
+    plot_two_samples(
+        &(samples[..PLOT_AMOUNT]
+            .iter()
+            .map(|s| s.to_bits())
+            .collect::<Vec<_>>()),
+        &filtered_samples[..PLOT_AMOUNT],
+    )
+    .unwrap();
+    export_to_wav(filtered_samples, "signal.wav");
+}
 
 #[test]
 fn test_metronome() {
@@ -179,72 +196,86 @@ fn test_metronome() {
 
     let mut samples = vec![];
 
-    // TODO: broken?
     for _ in 0..4 {
         synth.play(a!(0), U4F4::from_num(1.0));
-        let mut samples_new: Vec<_> = (0..10000).map(|_| synth.next().to_bits()).collect();
-        samples.append(&mut samples_new);
+        for _ in 0..4 {
+            let mut samples_new: Vec<_> = (0..10000).map(|_| synth.next().to_bits()).collect();
+            synth.play(b!(0), U4F4::from_num(1.0));
+            samples.append(&mut samples_new);
+        }
     }
 
-    plot_samples(&samples[..40000]).unwrap();
+    plot_samples(&samples[..70000]).unwrap();
     export_to_wav(samples, "signal.wav");
 }
 
-// #[test]
-// fn test_overtone_synth() {
-//     init_logger();
+#[test]
+fn test_overtone_synth() {
+    init_logger();
 
-//     let synths = [
-//         SineSynth::new(SineSynthSettings {
-//             attack_gain: 0.38,
-//             initial_phase: 0.13,
-//             decay_per_second: 0.5,
-//         }),
-//         SineSynth::new(SineSynthSettings {
-//             attack_gain: 0.4,
-//             initial_phase: 0.77,
-//             decay_per_second: 0.6,
-//         }),
-//         SineSynth::new(SineSynthSettings {
-//             attack_gain: 0.34,
-//             initial_phase: 0.21,
-//             decay_per_second: 0.5,
-//         }),
-//         SineSynth::new(SineSynthSettings {
-//             attack_gain: 0.02,
-//             initial_phase: 0.29,
-//             decay_per_second: 0.4,
-//         }),
-//         SineSynth::new(SineSynthSettings {
-//             attack_gain: 0.01,
-//             initial_phase: 0.11,
-//             decay_per_second: 0.3,
-//         }),
-//         SineSynth::new(SineSynthSettings {
-//             attack_gain: 0.01,
-//             initial_phase: 0.59,
-//             decay_per_second: 0.2,
-//         }),
-//     ];
+    let synths = [
+        SineSynth::new(
+            0x0,
+            SineSynthSettings {
+                extra_attack_gain: U4F4::from_num(0.5),
+                initial_phase: I1F15::from_num(0.13),
+                decay: I1F15::from_num(0.001),
+            },
+        ),
+        SineSynth::new(
+            0,
+            SineSynthSettings {
+                extra_attack_gain: U4F4::from_num(0.6),
+                initial_phase: I1F15::from_num(0.77),
+                decay: I1F15::from_num(0.0011),
+            },
+        ),
+        SineSynth::new(
+            0,
+            SineSynthSettings {
+                extra_attack_gain: U4F4::from_num(0.34),
+                initial_phase: I1F15::from_num(0.21),
+                decay: I1F15::from_num(0.004),
+            },
+        ),
+        SineSynth::new(
+            0,
+            SineSynthSettings {
+                extra_attack_gain: U4F4::from_num(0.02),
+                initial_phase: I1F15::from_num(0.29),
+                decay: I1F15::from_num(0.005),
+            },
+        ),
+    ];
 
-//     let mut synth = OvertoneSynth::new(OvertoneSynthSettings {}, synths);
+    let mut synth = OvertoneSynth::new(0, OvertoneSynthSettings {}, synths);
 
-//     let samples: Vec<i16> = (0..88100)
-//         .map(|i| {
-//             if i == 250 {
-//                 synth.play(e!(1), 1.2)
-//             }
-//             if i == 34000 {
-//                 synth.play(e!(1), 0.);
-//             }
-//             synth.next()
-//         })
-//         .collect();
+    let sample_rate = 44100;
+    let riff = [e!(1), g!(1), a!(1), e!(1), g!(1), bes!(1), a!(1)];
 
-//     plot_samples(&samples[..22000]).unwrap();
+    let note_durations = [0.5, 0.5, 1.0, 0.5, 0.5, 0.25, 1.0]
+        .iter()
+        .map(|d| d / 2.)
+        .collect::<Vec<_>>();
 
-//     export_to_wav(samples, "signal.wav");
-// }
+    let mut current_note_idx = 0;
+    let mut note_start = 0;
+
+    let samples: Vec<i16> = (0..sample_rate * 4)
+        .map(|i| {
+            if current_note_idx < riff.len() && i >= note_start {
+                synth.play(riff[current_note_idx], U4F4::from_num(1.0)); // Fixed velocity of 1.0
+                note_start = i + (note_durations[current_note_idx] * sample_rate as f64) as usize;
+                current_note_idx += 1;
+            }
+            synth.next().to_bits()
+        })
+        .collect();
+
+    plot_samples(&samples).unwrap();
+
+    export_to_wav(samples, "signal.wav");
+}
 
 #[test]
 fn test_sawtooth_synth() {
@@ -554,3 +585,34 @@ fn convert_i16_table_to_i1f15() {
     //     println!("I1F15::from_bits({:#018b}),", converted.to_bits());
     // }
 }
+
+#[test]
+
+fn resample_and_print() {
+    let input_rate = 44100;
+    let output_rate = 24000;
+    let data = WEAK_WAV_44100;
+    let ratio = input_rate as f32 / output_rate as f32;
+    let output_len = ((data.len() as f32) / ratio).ceil() as usize;
+
+    for i in 0..output_len {
+        let input_pos = i as f32 * ratio;
+        let idx = input_pos as usize;
+        let frac = input_pos - idx as f32;
+
+        let interpolated = if idx + 1 < data.len() {
+            let left: f32 = data[idx].to_num();
+            let right: f32 = data[idx + 1].to_num();
+            I1F15::from_num(left + (right - left) * frac)
+        } else {
+            data[idx]
+        };
+
+        println!(
+            "I1F15::from_bits({:#018b}u16 as i16),",
+            interpolated.to_bits()
+        );
+    }
+}
+
+// TODO: split up this file into hacks for constants and synth tests and helpers.

@@ -14,7 +14,6 @@ use cortex_m::{interrupt::Mutex, singleton};
 use defmt::*;
 use defmt_rtt as _;
 use embedded_hal::digital::v2::InputPin;
-use fixed::traits::Fixed;
 use fixed::types::I1F15;
 use fixed::types::U4F4;
 use fixed::types::U8F8;
@@ -42,7 +41,6 @@ use rp_pico::{
 
 use rytmos_engrave::{a, ais, b, c, cis, d, dis, e, f, fis, g, gis};
 use rytmos_synth::commands::CommandMessage;
-use rytmos_synth::synth::metronome::MetronomeSynth;
 use rytmos_synth::synth::sine::SineSynth;
 use rytmos_synth::synth::sine::SineSynthSettings;
 use rytmos_synth::{
@@ -121,21 +119,23 @@ fn synth_core(sys_freq: u32) -> ! {
     let sawtoonth_settings = SawtoothSynthSettings {
         decay: U8F8::from_num(0.9),
     };
+
     let mut synth = SawtoothSynth::new(0x0, sawtoonth_settings);
     let mut synth = SineSynth::new(
-        0x0,
+        0x1,
         SineSynthSettings {
             attack_gain: U4F4::from_num(1.0),
             initial_phase: I1F15::MIN,
-            decay_per_second: 0.0,
+            decay: 0.0,
         },
     );
-
-    let mut metronome = MetronomeSynth::new(0x1);
 
     let mut sample = 0i16;
 
     let mut warned = false;
+
+    // TODO: build a note scheduler that runs in this thread that can provide accurately timed notes.
+    // Introduces new commands that address a scheduler and schedule other commands
 
     loop {
         sio.fifo
@@ -382,3 +382,5 @@ const FN_0: usize = 12;
 const FN_1: usize = 13;
 const FN_2: usize = 14;
 const FN_3: usize = 15;
+
+// TODO: use IO_IRQ_BANK0 to add interrupts on the pins with buttons to handle input so the main thread can be used for graphics.
