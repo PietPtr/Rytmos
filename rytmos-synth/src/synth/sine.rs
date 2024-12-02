@@ -41,16 +41,12 @@ impl SineSynth {
     }
 }
 
-const DECAY_EVERY: usize = 32;
-
 #[derive(Clone, Copy, Debug, Default)]
 pub struct SineSynthSettings {
     /// Before velocity of the note is applied, apply this gain to any note played.
     pub extra_attack_gain: U4F4,
     /// Initial phase of the sine wave
     pub initial_phase: I1F15,
-    /// Decay subtracted from amplitude every `DECAY_EVERY` next() calls.
-    pub decay: I1F15,
 }
 
 impl Synth for SineSynth {
@@ -121,16 +117,7 @@ impl Synth for SineSynth {
             .saturating_mul(FixedI32::<U15>::from(self.velocity))
             .saturating_to_fixed::<I1F15>();
 
-        // TODO: this decay is generic enough that it can be its own processor.
-        // define generic signal processors with 1 inp and 1 outp, and a way to connect them.
-        // The low pass filter should also be such a processor
-        self.decay_counter += 1;
-        if self.decay_counter == DECAY_EVERY {
-            self.amplitude = (self.amplitude - self.settings.decay).max(I1F15::from_bits(0));
-            self.decay_counter = 0;
-        }
-
-        out_sample * self.amplitude
+        out_sample
     }
 
     fn run_command(&mut self, command: Command) {

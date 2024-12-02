@@ -9,8 +9,12 @@ use rand::Rng;
 use rytmos_engrave::*;
 use rytmos_synth::{
     commands::Command,
+    effect::{
+        linear_decay::{LinearDecay, LinearDecaySettings},
+        lpf::{compute_alpha, LowPassFilter, LowPassFilterSettings},
+        Effect,
+    },
     synth::{
-        lpf::{compute_alpha, LowPassFilter},
         metronome::MetronomeSynth,
         overtone::{OvertoneSynth, OvertoneSynthSettings},
         samples::weak::WEAK_WAV_44100,
@@ -29,7 +33,6 @@ fn init_logger() {
     });
 }
 
-// TODO: repair all the synths
 #[test]
 fn test_sine_synth() {
     init_logger();
@@ -41,26 +44,30 @@ fn test_sine_synth() {
         SineSynthSettings {
             extra_attack_gain: U4F4::from_num(1.0),
             initial_phase: I1F15::from_num(0.),
-            decay: I1F15::from_num(0.001),
         },
     );
+
+    let mut linear_decay = LinearDecay::new(0x0, LinearDecaySettings::default());
 
     let samples: Vec<i16> = (0..SAMPLES)
         .map(|i| {
             if i == 0 {
-                synth.play(c!(4), U4F4::from_num(2.9))
+                synth.play(c!(4), U4F4::from_num(0.9));
+                linear_decay.play(c!(4), U4F4::from_num(0.9));
             }
             if i == 40000 {
-                synth.play(e!(4), U4F4::from_num(0.9))
+                synth.play(e!(4), U4F4::from_num(0.9));
+                linear_decay.play(e!(4), U4F4::from_num(0.9));
             }
             if i == 80000 {
-                synth.play(g!(4), U4F4::from_num(0.9))
+                synth.play(g!(4), U4F4::from_num(0.9));
+                linear_decay.play(g!(4), U4F4::from_num(0.9));
             }
-            synth.next().to_bits()
+            linear_decay.next(synth.next()).to_bits()
         })
         .collect();
 
-    plot_samples(&samples[..2000]).unwrap();
+    plot_samples(&samples).unwrap();
     export_to_wav(samples, "signal.wav");
 }
 
@@ -93,7 +100,6 @@ fn test_sine_error() {
         SineSynthSettings {
             extra_attack_gain: U4F4::from_num(1.0),
             initial_phase: I1F15::from_num(0.),
-            decay: I1F15::from_num(0),
         },
     );
 
@@ -136,7 +142,6 @@ fn test_vibrato_synth() {
             sine_settings: SineSynthSettings {
                 extra_attack_gain: U4F4::from_num(1.0),
                 initial_phase: I1F15::from_bits(0),
-                decay: I1F15::from_num(0.001),
             },
             vibrato_velocity: U4F4::from_num(1.),
             vibrato_synth_divider: 7,
@@ -165,7 +170,9 @@ fn test_lpf() {
     );
 
     // But filter it aggressively
-    let mut lpf = LowPassFilter::new(compute_alpha(250., 24000));
+    let mut lpf = LowPassFilter::new(LowPassFilterSettings {
+        alpha: compute_alpha(250., 24000),
+    });
 
     synth.play(a!(1), U4F4::MAX);
 
@@ -219,7 +226,6 @@ fn test_overtone_synth() {
             SineSynthSettings {
                 extra_attack_gain: U4F4::from_num(0.5),
                 initial_phase: I1F15::from_num(0.13),
-                decay: I1F15::from_num(0.001),
             },
         ),
         SineSynth::new(
@@ -227,7 +233,6 @@ fn test_overtone_synth() {
             SineSynthSettings {
                 extra_attack_gain: U4F4::from_num(0.6),
                 initial_phase: I1F15::from_num(0.77),
-                decay: I1F15::from_num(0.0011),
             },
         ),
         SineSynth::new(
@@ -235,7 +240,6 @@ fn test_overtone_synth() {
             SineSynthSettings {
                 extra_attack_gain: U4F4::from_num(0.34),
                 initial_phase: I1F15::from_num(0.21),
-                decay: I1F15::from_num(0.004),
             },
         ),
         SineSynth::new(
@@ -243,20 +247,18 @@ fn test_overtone_synth() {
             SineSynthSettings {
                 extra_attack_gain: U4F4::from_num(0.02),
                 initial_phase: I1F15::from_num(0.29),
-                decay: I1F15::from_num(0.005),
             },
         ),
     ];
 
+    // TODO: build decaying sine synth wrapper
+
     let mut synth = OvertoneSynth::new(0, OvertoneSynthSettings {}, synths);
 
-    let sample_rate = 44100;
+    let sample_rate = 24000;
     let riff = [e!(1), g!(1), a!(1), e!(1), g!(1), bes!(1), a!(1)];
 
-    let note_durations = [0.5, 0.5, 1.0, 0.5, 0.5, 0.25, 1.0]
-        .iter()
-        .map(|d| d / 2.)
-        .collect::<Vec<_>>();
+    let note_durations = [0.5, 0.5, 1.0, 0.5, 0.5, 0.25, 1.0];
 
     let mut current_note_idx = 0;
     let mut note_start = 0;

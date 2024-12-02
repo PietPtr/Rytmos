@@ -6,17 +6,14 @@
 #[used]
 pub static BOOT2_FIRMWARE: [u8; 256] = rp2040_boot2::BOOT_LOADER_W25Q080;
 
-use core::cell::RefCell;
 use core::u32;
 
-use cortex_m::{interrupt::Mutex, singleton};
+use cortex_m::singleton;
 use defmt::*;
 use defmt_rtt as _;
 use embedded_hal::digital::v2::OutputPin;
-use fixed::types::extra::U4;
 use fixed::types::I1F15;
 use fixed::types::U4F4;
-use fixed::types::U8F8;
 use fugit::HertzU32;
 use panic_probe as _;
 use rp_pico::{
@@ -28,8 +25,7 @@ use rp_pico::{
         multicore::{Multicore, Stack},
         pio::{Buffers, PIOBuilder, PIOExt, PinDir, ShiftDirection},
         pll::{common_configs::PLL_USB_48MHZ, setup_pll_blocking},
-        sio::{Sio, SioFifo},
-        timer::Alarm1,
+        sio::Sio,
         watchdog::Watchdog,
         xosc::setup_xosc_blocking,
     },
@@ -37,7 +33,6 @@ use rp_pico::{
 };
 
 use rytmos_engrave::a;
-use rytmos_synth::synth::sine::SineSynth;
 use rytmos_synth::synth::sine::SineSynthSettings;
 use rytmos_synth::synth::vibrato::VibratoSynth;
 use rytmos_synth::synth::vibrato::VibratoSynthSettings;
@@ -116,7 +111,6 @@ fn synth_core(sys_freq: u32) -> ! {
             sine_settings: SineSynthSettings {
                 extra_attack_gain: U4F4::from_num(1),
                 initial_phase: I1F15::from_num(1),
-                decay: I1F15::from_num(0.0003),
             },
             vibrato_velocity: U4F4::from_num(1.),
             vibrato_synth_divider: 7,

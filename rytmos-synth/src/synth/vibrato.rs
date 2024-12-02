@@ -39,7 +39,6 @@ impl VibratoSynth {
             SineSynthSettings {
                 extra_attack_gain: U4F4::from_num(1.),
                 initial_phase: I1F15::from_bits(0),
-                decay: I1F15::from_bits(0),
             },
         );
 

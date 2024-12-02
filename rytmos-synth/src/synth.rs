@@ -3,7 +3,6 @@ use rytmos_engrave::staff::Note;
 
 use crate::commands::{Command, CommandMessage};
 
-pub mod lpf;
 pub mod master;
 pub mod metronome;
 pub mod overtone;

@@ -125,7 +125,6 @@ fn synth_core(sys_freq: u32) -> ! {
         0x1,
         SineSynthSettings {
             extra_attack_gain: U4F4::from_num(1.0),
-            decay: I1F15::from_num(0.001),
             initial_phase: I1F15::MIN,
         },
     );
