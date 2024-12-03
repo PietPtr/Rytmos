@@ -17,32 +17,24 @@ pub struct SawtoothSynth {
     sample_counter: u32,
 }
 
-impl SawtoothSynth {
-    pub fn new(address: u32, settings: SawtoothSynthSettings) -> Self {
-        log::info!("Sawtooth Settings: {settings:?}");
+#[derive(Clone, Copy, Debug)]
+pub struct SawtoothSynthSettings {}
+
+impl Synth for SawtoothSynth {
+    type Settings = ();
+
+    fn make(address: u32, settings: Self::Settings) -> Self {
         Self {
             address,
-            settings,
+            settings: SawtoothSynthSettings {},
             increment: I1F15::from_num(0),
             sample: I1F15::from_num(0),
             velocity: U8F8::from_num(0),
             sample_counter: 0,
         }
     }
-}
 
-#[derive(Clone, Copy, Debug)]
-pub struct SawtoothSynthSettings {
-    // TODO: see refactor in sine for implementing generic decay
-    pub decay: U8F8,
-}
-
-impl Synth for SawtoothSynth {
-    type Settings = SawtoothSynthSettings;
-
-    fn configure(&mut self, settings: Self::Settings) {
-        self.settings = settings
-    }
+    fn configure(&mut self, (): Self::Settings) {}
 
     fn play(&mut self, note: rytmos_engrave::staff::Note, velocity: U4F4) {
         self.velocity = velocity.into();
@@ -62,11 +54,6 @@ impl Synth for SawtoothSynth {
         let out_sample = FixedI32::<U15>::from(next_sample)
             .saturating_mul(FixedI32::<U15>::from(self.velocity))
             .saturating_to_fixed::<I1F15>();
-
-        if self.sample_counter == 1000 {
-            self.sample_counter = 0;
-            self.velocity = (self.velocity * self.settings.decay).max(U8F8::from_num(0))
-        }
 
         out_sample
     }

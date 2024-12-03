@@ -38,6 +38,19 @@ impl LinearDecay {
 impl Effect for LinearDecay {
     type Settings = LinearDecaySettings;
 
+    fn make(address: u32, settings: Self::Settings) -> Self {
+        Self {
+            settings,
+            decay_counter: 0,
+            amplitude: I1F15::from_bits(0),
+            address,
+        }
+    }
+
+    fn configure(&mut self, settings: Self::Settings) {
+        self.settings = settings;
+    }
+
     fn next(&mut self, input: I1F15) -> I1F15 {
         self.decay_counter += 1;
 

@@ -1,7 +1,7 @@
 use std::sync::Once;
 
 use fixed::{
-    types::{extra::U15, I1F15, U14F2, U4F4, U8F8},
+    types::{extra::U15, I1F15, U14F2, U4F4},
     FixedU32,
 };
 use plotters::prelude::*;
@@ -10,15 +10,19 @@ use rytmos_engrave::*;
 use rytmos_synth::{
     commands::Command,
     effect::{
+        exponential_decay::{ExponentialDecay, ExponentialDecaySettings},
         linear_decay::{LinearDecay, LinearDecaySettings},
         lpf::{compute_alpha, LowPassFilter, LowPassFilterSettings},
         Effect,
     },
     synth::{
+        composed::{
+            overtone::{OvertoneSynth, OvertoneSynthSettings},
+            synth_with_effects::{SynthWithEffect, SynthWithEffectSettings},
+        },
         metronome::MetronomeSynth,
-        overtone::{OvertoneSynth, OvertoneSynthSettings},
         samples::weak::WEAK_WAV_44100,
-        sawtooth::{SawtoothSynth, SawtoothSynthSettings},
+        sawtooth::SawtoothSynth,
         sine::{SineSynth, SineSynthSettings},
         vibrato::{VibratoSynth, VibratoSynthSettings},
         Synth, SAMPLE_RATE,
@@ -39,7 +43,8 @@ fn test_sine_synth() {
 
     const SAMPLES: usize = 120100;
 
-    let mut synth = SineSynth::new(
+    // TODO: rewrite with SynthWithEffect
+    let mut synth = SineSynth::make(
         0,
         SineSynthSettings {
             extra_attack_gain: U4F4::from_num(1.0),
@@ -47,23 +52,24 @@ fn test_sine_synth() {
         },
     );
 
-    let mut linear_decay = LinearDecay::new(0x0, LinearDecaySettings::default());
+    let mut _decay = LinearDecay::new(0x0, LinearDecaySettings::default());
+    let mut decay = ExponentialDecay::make(0x0, ExponentialDecaySettings::default());
 
     let samples: Vec<i16> = (0..SAMPLES)
         .map(|i| {
             if i == 0 {
                 synth.play(c!(4), U4F4::from_num(0.9));
-                linear_decay.play(c!(4), U4F4::from_num(0.9));
+                decay.play(c!(4), U4F4::from_num(0.9));
             }
             if i == 40000 {
                 synth.play(e!(4), U4F4::from_num(0.9));
-                linear_decay.play(e!(4), U4F4::from_num(0.9));
+                decay.play(e!(4), U4F4::from_num(0.9));
             }
             if i == 80000 {
                 synth.play(g!(4), U4F4::from_num(0.9));
-                linear_decay.play(g!(4), U4F4::from_num(0.9));
+                decay.play(g!(4), U4F4::from_num(0.9));
             }
-            linear_decay.next(synth.next()).to_bits()
+            decay.next(synth.next()).to_bits()
         })
         .collect();
 
@@ -95,7 +101,7 @@ fn test_sine_error() {
 
     const SAMPLES: usize = 6400;
 
-    let mut synth = SineSynth::new(
+    let mut synth = SineSynth::make(
         0,
         SineSynthSettings {
             extra_attack_gain: U4F4::from_num(1.0),
@@ -136,7 +142,7 @@ fn test_sine_error() {
 fn test_vibrato_synth() {
     init_logger();
 
-    let mut synth = VibratoSynth::new(
+    let mut synth = VibratoSynth::make(
         0x0,
         VibratoSynthSettings {
             sine_settings: SineSynthSettings {
@@ -161,45 +167,37 @@ fn test_vibrato_synth() {
 fn test_lpf() {
     init_logger();
 
-    // Run a very distorted sine synth
-    let mut synth = SineSynth::new(
-        0x0,
-        SineSynthSettings {
-            ..SineSynthSettings::default()
+    type LpfSynth = SineSynth;
+    type LpfSettings = <LpfSynth as Synth>::Settings;
+
+    // Run a synth synth and filter it aggressively
+    let mut synth = SynthWithEffect::<LpfSynth, LowPassFilter>::make(
+        0,
+        SynthWithEffectSettings::<LpfSynth, LowPassFilter> {
+            synth: LpfSettings::default(),
+            effect: LowPassFilterSettings {
+                alpha: compute_alpha(250., 24000),
+            },
         },
     );
 
-    // But filter it aggressively
-    let mut lpf = LowPassFilter::new(LowPassFilterSettings {
-        alpha: compute_alpha(250., 24000),
-    });
-
+    // High velocity to cause clipping that can be filtered.
     synth.play(a!(1), U4F4::MAX);
 
-    let samples = (0..44100).map(|_| synth.next()).collect::<Vec<_>>();
-
-    let filtered_samples = samples
-        .iter()
-        .map(|&s| lpf.next(s).to_bits())
+    let samples = (0..44100)
+        .map(|_| synth.next().to_bits())
         .collect::<Vec<_>>();
 
     const PLOT_AMOUNT: usize = 2000;
-    plot_two_samples(
-        &(samples[..PLOT_AMOUNT]
-            .iter()
-            .map(|s| s.to_bits())
-            .collect::<Vec<_>>()),
-        &filtered_samples[..PLOT_AMOUNT],
-    )
-    .unwrap();
-    export_to_wav(filtered_samples, "signal.wav");
+    plot_samples(&samples[..PLOT_AMOUNT]).unwrap();
+    export_to_wav(samples, "signal.wav");
 }
 
 #[test]
 fn test_metronome() {
     init_logger();
 
-    let mut synth = MetronomeSynth::new(0);
+    let mut synth = MetronomeSynth::make(0, ());
 
     let mut samples = vec![];
 
@@ -220,40 +218,25 @@ fn test_metronome() {
 fn test_overtone_synth() {
     init_logger();
 
+    type Decay = LinearDecay;
+
+    let make_settings = |gain, phase| SynthWithEffectSettings::<SineSynth, Decay> {
+        synth: SineSynthSettings {
+            extra_attack_gain: U4F4::from_num(gain),
+            initial_phase: I1F15::from_num(phase),
+        },
+        effect: <Decay as Effect>::Settings::default(),
+    };
+
     let synths = [
-        SineSynth::new(
-            0x0,
-            SineSynthSettings {
-                extra_attack_gain: U4F4::from_num(0.5),
-                initial_phase: I1F15::from_num(0.13),
-            },
-        ),
-        SineSynth::new(
-            0,
-            SineSynthSettings {
-                extra_attack_gain: U4F4::from_num(0.6),
-                initial_phase: I1F15::from_num(0.77),
-            },
-        ),
-        SineSynth::new(
-            0,
-            SineSynthSettings {
-                extra_attack_gain: U4F4::from_num(0.34),
-                initial_phase: I1F15::from_num(0.21),
-            },
-        ),
-        SineSynth::new(
-            0,
-            SineSynthSettings {
-                extra_attack_gain: U4F4::from_num(0.02),
-                initial_phase: I1F15::from_num(0.29),
-            },
-        ),
+        make_settings(0.5, 0.13),
+        make_settings(0.6, 0.77),
+        make_settings(0.34, 0.21),
+        make_settings(0.02, 0.29),
     ];
 
-    // TODO: build decaying sine synth wrapper
-
-    let mut synth = OvertoneSynth::new(0, OvertoneSynthSettings {}, synths);
+    let mut synth: OvertoneSynth<SynthWithEffect<SineSynth, Decay>, 4> =
+        OvertoneSynth::make(0, OvertoneSynthSettings { synths });
 
     let sample_rate = 24000;
     let riff = [e!(1), g!(1), a!(1), e!(1), g!(1), bes!(1), a!(1)];
@@ -283,12 +266,7 @@ fn test_overtone_synth() {
 fn test_sawtooth_synth() {
     init_logger();
 
-    let mut synth = SawtoothSynth::new(
-        0x0,
-        SawtoothSynthSettings {
-            decay: U8F8::from_num(0.90),
-        },
-    );
+    let mut synth = SawtoothSynth::make(0x0, ());
 
     synth.play(a!(4), U4F4::from_num(1.01));
 

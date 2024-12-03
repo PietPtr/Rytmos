@@ -3,9 +3,9 @@ use rytmos_engrave::staff::Note;
 
 use crate::commands::{Command, CommandMessage};
 
+pub mod composed;
 pub mod master;
 pub mod metronome;
-pub mod overtone;
 pub mod samples;
 pub mod sawtooth;
 pub mod sine;
@@ -16,6 +16,9 @@ pub const SAMPLE_RATE: f32 = 24000.0;
 pub trait Synth {
     type Settings;
 
+    fn make(address: u32, settings: Self::Settings) -> Self
+    where
+        Self: Sized;
     fn configure(&mut self, settings: Self::Settings);
     fn play(&mut self, note: Note, velocity: U4F4);
     fn next(&mut self) -> I1F15;

@@ -32,9 +32,11 @@ pub struct VibratoSynthSettings {
     pub vibrato_strength: u8,
 }
 
-impl VibratoSynth {
-    pub fn new(address: u32, settings: VibratoSynthSettings) -> Self {
-        let mut vibrato_synth = SineSynth::new(
+impl Synth for VibratoSynth {
+    type Settings = VibratoSynthSettings;
+
+    fn make(address: u32, settings: Self::Settings) -> Self {
+        let mut vibrato_synth = SineSynth::make(
             address,
             SineSynthSettings {
                 extra_attack_gain: U4F4::from_num(1.),
@@ -47,16 +49,12 @@ impl VibratoSynth {
         Self {
             address,
             settings,
-            sine_synth: SineSynth::new(address, settings.sine_settings),
+            sine_synth: SineSynth::make(address, settings.sine_settings),
             vibrato_synth,
             vibrato_synth_counter: 0,
             last_bend: I1F15::from_bits(0),
         }
     }
-}
-
-impl Synth for VibratoSynth {
-    type Settings = VibratoSynthSettings;
 
     fn configure(&mut self, settings: Self::Settings) {
         self.settings = settings

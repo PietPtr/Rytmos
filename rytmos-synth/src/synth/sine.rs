@@ -1,3 +1,4 @@
+use derivative::Derivative;
 use fixed::{
     traits::ToFixed,
     types::{extra::U15, I1F15, U4F4},
@@ -18,34 +19,23 @@ pub struct SineSynth {
     gain: u8,
     velocity: U4F4,
     amplitude: I1F15,
-    decay_counter: usize,
 }
 
 impl SineSynth {
-    pub fn new(address: u32, settings: SineSynthSettings) -> Self {
-        Self {
-            address,
-            settings,
-            phase: settings.initial_phase,
-            gain: 0,
-            bend: I1F15::from_bits(0),
-            phase_inc: I1F15::from_bits(0),
-            amplitude: I1F15::from_bits(0),
-            velocity: U4F4::from_num(1),
-            decay_counter: 0,
-        }
-    }
-
     fn lerp(a: I1F15, b: I1F15, t: I1F15) -> I1F15 {
         (I1F15::MAX - t) * a + t * b
     }
 }
 
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Derivative)]
+#[derivative(Default)]
+#[derive(Clone, Copy, Debug)]
 pub struct SineSynthSettings {
     /// Before velocity of the note is applied, apply this gain to any note played.
+    #[derivative(Default(value = "U4F4::from_num(1.0)"))]
     pub extra_attack_gain: U4F4,
     /// Initial phase of the sine wave
+    #[derivative(Default(value = "I1F15::from_num(0.0)"))]
     pub initial_phase: I1F15,
 }
 
@@ -126,5 +116,18 @@ impl Synth for SineSynth {
 
     fn address(&self) -> u32 {
         self.address
+    }
+
+    fn make(address: u32, settings: Self::Settings) -> Self {
+        Self {
+            address,
+            settings,
+            phase: settings.initial_phase,
+            gain: 0,
+            bend: I1F15::from_bits(0),
+            phase_inc: I1F15::from_bits(0),
+            amplitude: I1F15::from_bits(0),
+            velocity: U4F4::from_num(1),
+        }
     }
 }

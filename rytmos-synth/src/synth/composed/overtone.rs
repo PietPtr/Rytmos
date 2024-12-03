@@ -1,34 +1,30 @@
 use fixed::types::{I1F15, U4F4};
 use rytmos_engrave::staff::Note;
 
-use crate::commands::Command;
-
-use super::Synth;
+use crate::{commands::Command, synth::Synth};
 
 /// Synthesizer that overlays a single synth N times in its integer overtone series.
 pub struct OvertoneSynth<S: Synth, const N: usize> {
     address: u32,
-    settings: OvertoneSynthSettings<N>,
     synths: [S; N],
 }
 
-pub struct OvertoneSynthSettings<const N: usize> {}
-
-impl<S: Synth, const N: usize> OvertoneSynth<S, N> {
-    pub fn new(address: u32, settings: OvertoneSynthSettings<N>, synths: [S; N]) -> Self {
-        Self {
-            address,
-            settings,
-            synths,
-        }
-    }
+pub struct OvertoneSynthSettings<S: Synth, const N: usize> {
+    pub synths: [S::Settings; N],
 }
 
 impl<S: Synth, const N: usize> Synth for OvertoneSynth<S, N> {
-    type Settings = OvertoneSynthSettings<N>;
+    type Settings = OvertoneSynthSettings<S, N>;
+
+    fn make(address: u32, settings: Self::Settings) -> Self {
+        let synths = settings.synths.map(|settings| S::make(address, settings));
+        Self { address, synths }
+    }
 
     fn configure(&mut self, settings: Self::Settings) {
-        self.settings = settings
+        for (synth, settings) in self.synths.iter_mut().zip(settings.synths) {
+            synth.configure(settings);
+        }
     }
 
     fn play(&mut self, mut note: Note, velocity: U4F4) {
@@ -46,7 +42,7 @@ impl<S: Synth, const N: usize> Synth for OvertoneSynth<S, N> {
     }
 
     fn run_command(&mut self, command: Command) {
-        super::run_play_command(self, command);
+        crate::synth::run_play_command(self, command);
     }
 
     fn address(&self) -> u32 {

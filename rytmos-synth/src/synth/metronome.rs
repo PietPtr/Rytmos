@@ -21,8 +21,12 @@ enum Sample {
     Weak,
 }
 
-impl MetronomeSynth {
-    pub fn new(address: u32) -> Self {
+impl MetronomeSynth {}
+
+impl Synth for MetronomeSynth {
+    type Settings = ();
+
+    fn make(address: u32, settings: Self::Settings) -> Self {
         Self {
             address,
             sample: 0,
@@ -30,10 +34,6 @@ impl MetronomeSynth {
             play_sample: None,
         }
     }
-}
-
-impl Synth for MetronomeSynth {
-    type Settings = ();
 
     fn configure(&mut self, _settings: Self::Settings) {}
 

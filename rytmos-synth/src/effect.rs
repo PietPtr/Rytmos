@@ -10,6 +10,12 @@ pub mod lpf;
 pub trait Effect {
     type Settings;
 
+    fn make(address: u32, settings: Self::Settings) -> Self
+    where
+        Self: Sized;
+
+    fn configure(&mut self, settings: Self::Settings);
+
     /// Effects modify a single input stream into a new output stream
     /// at the same sample rate.
     fn next(&mut self, input: I1F15) -> I1F15;

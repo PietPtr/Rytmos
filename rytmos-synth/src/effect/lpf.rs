@@ -35,6 +35,17 @@ impl LowPassFilter {
 impl Effect for LowPassFilter {
     type Settings = LowPassFilterSettings;
 
+    fn make(_address: u32, settings: Self::Settings) -> Self {
+        Self {
+            settings,
+            prev_output: I1F15::from_num(0.0),
+        }
+    }
+
+    fn configure(&mut self, settings: Self::Settings) {
+        self.settings = settings;
+    }
+
     fn next(&mut self, input: I1F15) -> I1F15 {
         self.prev_output = self.settings.alpha * input
             + (I1F15::MAX - self.settings.alpha + I1F15::from_bits(1)) * self.prev_output;

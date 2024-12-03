@@ -40,6 +40,13 @@ use rp_pico::{
 
 use rytmos_engrave::{a, ais, b, c, cis, d, dis, e, f, fis, g, gis};
 use rytmos_synth::commands::CommandMessage;
+use rytmos_synth::effect::exponential_decay::ExponentialDecay;
+use rytmos_synth::effect::exponential_decay::ExponentialDecaySettings;
+use rytmos_synth::effect::Effect;
+use rytmos_synth::synth::composed::overtone::OvertoneSynth;
+use rytmos_synth::synth::composed::overtone::OvertoneSynthSettings;
+use rytmos_synth::synth::composed::synth_with_effects::SynthWithEffect;
+use rytmos_synth::synth::composed::synth_with_effects::SynthWithEffectSettings;
 use rytmos_synth::synth::sine::SineSynth;
 use rytmos_synth::synth::sine::SineSynthSettings;
 use rytmos_synth::{
@@ -116,18 +123,23 @@ fn synth_core(sys_freq: u32) -> ! {
 
     info!("Start Synth core.");
 
-    let sawtoonth_settings = SawtoothSynthSettings {
-        decay: U8F8::from_num(0.9),
+    let make_settings = |gain, phase| SynthWithEffectSettings::<SineSynth, ExponentialDecay> {
+        synth: SineSynthSettings {
+            extra_attack_gain: U4F4::from_num(gain),
+            initial_phase: I1F15::from_num(phase),
+        },
+        effect: ExponentialDecaySettings::default(),
     };
 
-    let mut synth = SawtoothSynth::new(0x0, sawtoonth_settings);
-    let mut synth = SineSynth::new(
-        0x1,
-        SineSynthSettings {
-            extra_attack_gain: U4F4::from_num(1.0),
-            initial_phase: I1F15::MIN,
-        },
-    );
+    let synths = [
+        make_settings(0.5, 0.13),
+        make_settings(0.6, 0.77),
+        make_settings(0.34, 0.21),
+        make_settings(0.02, 0.29),
+    ];
+
+    let mut synth: OvertoneSynth<SynthWithEffect<SineSynth, ExponentialDecay>, 4> =
+        OvertoneSynth::make(0, OvertoneSynthSettings { synths });
 
     let mut sample = 0i16;
 

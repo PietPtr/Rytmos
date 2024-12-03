@@ -105,7 +105,7 @@ fn synth_core(sys_freq: u32) -> ! {
 
     info!("Start Synth core.");
 
-    let mut synth = VibratoSynth::new(
+    let mut synth = VibratoSynth::make(
         0,
         VibratoSynthSettings {
             sine_settings: SineSynthSettings {
