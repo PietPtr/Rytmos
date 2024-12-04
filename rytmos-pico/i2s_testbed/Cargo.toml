@@ -24,7 +24,8 @@ rp2040-boot2 = "0.2.1"
 libm = "0.2.8"
 micromath = "2.1.0"
 rytmos-engrave = { path = "../../rytmos-engrave" }
-rytmos-scribe = { path = "../../rytmos-scribe" }
 rytmos-synth = { path = "../../rytmos-synth" }
-rytmos-ui = { path = "../../rytmos-ui" }
 common = { path = "../common" }
+
+[features]
+benchmark = []

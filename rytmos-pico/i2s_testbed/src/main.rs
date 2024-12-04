@@ -16,6 +16,7 @@ use fixed::types::I1F15;
 use fixed::types::U4F4;
 use fugit::HertzU32;
 use panic_probe as _;
+use rp_pico::hal::Timer;
 use rp_pico::{
     entry,
     hal::{
@@ -57,6 +58,8 @@ fn synth_core(sys_freq: u32) -> ! {
         &mut pac.RESETS,
     );
     let mut delay = cortex_m::delay::Delay::new(core.SYST, sys_freq);
+    let clocks = ClocksManager::new(pac.CLOCKS);
+    let timer = Timer::new(pac.TIMER, &mut pac.RESETS, &clocks);
 
     let i2s_sck_pin = pins.gpio12.into_function::<FunctionPio0>();
     let i2s_din_pin = pins.gpio13.into_function::<FunctionPio0>();
@@ -132,6 +135,8 @@ fn synth_core(sys_freq: u32) -> ! {
             warned = true;
         }
 
+        let start = timer.get_counter();
+
         let (next_tx_buf, next_tx_transfer) = i2s_tx_transfer.wait();
         for (i, e) in next_tx_buf.iter_mut().enumerate() {
             if i % 2 == 0 {
@@ -144,6 +149,9 @@ fn synth_core(sys_freq: u32) -> ! {
         }
 
         i2s_tx_transfer = next_tx_transfer.read_next(next_tx_buf);
+
+        let end = timer.get_counter();
+        info!("16 samples took {}ns", (end - start).to_nanos());
     }
 }
 

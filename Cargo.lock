@@ -947,9 +947,7 @@ dependencies = [
  "rp-pico",
  "rp2040-boot2",
  "rytmos-engrave",
- "rytmos-scribe",
  "rytmos-synth",
- "rytmos-ui",
 ]
 
 [[package]]
