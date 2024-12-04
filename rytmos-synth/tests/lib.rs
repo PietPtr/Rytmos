@@ -47,8 +47,8 @@ fn test_sine_synth() {
     let mut synth = SineSynth::make(
         0,
         SineSynthSettings {
-            extra_attack_gain: U4F4::from_num(1.0),
-            initial_phase: I1F15::from_num(0.),
+            do_lerp: false,
+            ..SineSynthSettings::default()
         },
     );
 
@@ -73,7 +73,7 @@ fn test_sine_synth() {
         })
         .collect();
 
-    plot_samples(&samples).unwrap();
+    plot_samples(&samples[..200]).unwrap();
     export_to_wav(samples, "signal.wav");
 }
 
@@ -106,6 +106,7 @@ fn test_sine_error() {
         SineSynthSettings {
             extra_attack_gain: U4F4::from_num(1.0),
             initial_phase: I1F15::from_num(0.),
+            do_lerp: true,
         },
     );
 
@@ -145,10 +146,7 @@ fn test_vibrato_synth() {
     let mut synth = VibratoSynth::make(
         0x0,
         VibratoSynthSettings {
-            sine_settings: SineSynthSettings {
-                extra_attack_gain: U4F4::from_num(1.0),
-                initial_phase: I1F15::from_bits(0),
-            },
+            sine_settings: SineSynthSettings::default(),
             vibrato_velocity: U4F4::from_num(1.),
             vibrato_synth_divider: 7,
             vibrato_strength: 5,
@@ -167,7 +165,7 @@ fn test_vibrato_synth() {
 fn test_lpf() {
     init_logger();
 
-    type LpfSynth = SineSynth;
+    type LpfSynth = SawtoothSynth;
     type LpfSettings = <LpfSynth as Synth>::Settings;
 
     // Run a synth synth and filter it aggressively
@@ -182,7 +180,7 @@ fn test_lpf() {
     );
 
     // High velocity to cause clipping that can be filtered.
-    synth.play(a!(1), U4F4::MAX);
+    synth.play(a!(1), U4F4::from_num(1.));
 
     let samples = (0..44100)
         .map(|_| synth.next().to_bits())
@@ -224,6 +222,7 @@ fn test_overtone_synth() {
         synth: SineSynthSettings {
             extra_attack_gain: U4F4::from_num(gain),
             initial_phase: I1F15::from_num(phase),
+            do_lerp: true,
         },
         effect: <Decay as Effect>::Settings::default(),
     };

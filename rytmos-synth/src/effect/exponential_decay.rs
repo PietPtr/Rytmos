@@ -14,7 +14,7 @@ use super::{run_play_command, Effect};
 #[derivative(Default)]
 #[derive(Debug, Clone, Copy)]
 pub struct ExponentialDecaySettings {
-    #[derivative(Default(value = "I1F15::from_num(0.999)"))]
+    #[derivative(Default(value = "I1F15::from_num(0.99)"))]
     pub decay: I1F15,
     #[derivative(Default(value = "32"))]
     pub decay_every: usize,

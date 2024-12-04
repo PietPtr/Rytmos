@@ -1,5 +1,6 @@
 use core::u32;
 
+use derivative::Derivative;
 use fixed::types::{I1F15, U4F4};
 use rytmos_engrave::staff::Note;
 
@@ -10,13 +11,17 @@ pub struct LowPassFilter {
     prev_output: I1F15,
 }
 
+#[derive(Derivative)]
+#[derivative(Default)]
+#[derive(Debug)]
 pub struct LowPassFilterSettings {
+    #[derivative(Default(value = "I1F15::from_num(0.05)"))]
     pub alpha: I1F15,
 }
 
 /// SLOW
 /// Computes the alpha parameter needed in a low pass filter.
-pub fn compute_alpha(cutoff: f32, sample_rate: usize) -> I1F15 {
+pub fn compute_alpha(cutoff: f32, sample_rate: u32) -> I1F15 {
     let alpha = cutoff / (cutoff + sample_rate as f32);
     let fixed_alpha = I1F15::from_num(alpha);
     log::trace!("compute_alpha(cutoff={cutoff}, sample_rate={sample_rate}) -> alpha={alpha} fixed={fixed_alpha})");

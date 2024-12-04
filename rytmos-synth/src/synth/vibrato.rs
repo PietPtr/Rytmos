@@ -36,13 +36,7 @@ impl Synth for VibratoSynth {
     type Settings = VibratoSynthSettings;
 
     fn make(address: u32, settings: Self::Settings) -> Self {
-        let mut vibrato_synth = SineSynth::make(
-            address,
-            SineSynthSettings {
-                extra_attack_gain: U4F4::from_num(1.),
-                initial_phase: I1F15::from_bits(0),
-            },
-        );
+        let mut vibrato_synth = SineSynth::make(address, SineSynthSettings::default());
 
         vibrato_synth.play(a!(0), settings.vibrato_velocity);
 

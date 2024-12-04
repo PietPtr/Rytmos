@@ -6,6 +6,7 @@ use crate::commands::{Command, CommandMessage};
 pub mod composed;
 pub mod master;
 pub mod metronome;
+pub mod nothing;
 pub mod samples;
 pub mod sawtooth;
 pub mod sine;

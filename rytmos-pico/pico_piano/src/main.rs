@@ -42,6 +42,9 @@ use rytmos_engrave::{a, ais, b, c, cis, d, dis, e, f, fis, g, gis};
 use rytmos_synth::commands::CommandMessage;
 use rytmos_synth::effect::exponential_decay::ExponentialDecay;
 use rytmos_synth::effect::exponential_decay::ExponentialDecaySettings;
+use rytmos_synth::effect::lpf::compute_alpha;
+use rytmos_synth::effect::lpf::LowPassFilter;
+use rytmos_synth::effect::lpf::LowPassFilterSettings;
 use rytmos_synth::effect::Effect;
 use rytmos_synth::synth::composed::overtone::OvertoneSynth;
 use rytmos_synth::synth::composed::overtone::OvertoneSynthSettings;
@@ -127,6 +130,7 @@ fn synth_core(sys_freq: u32) -> ! {
         synth: SineSynthSettings {
             extra_attack_gain: U4F4::from_num(gain),
             initial_phase: I1F15::from_num(phase),
+            do_lerp: false,
         },
         effect: ExponentialDecaySettings::default(),
     };
@@ -138,8 +142,17 @@ fn synth_core(sys_freq: u32) -> ! {
         make_settings(0.02, 0.29),
     ];
 
-    let mut synth: OvertoneSynth<SynthWithEffect<SineSynth, ExponentialDecay>, 4> =
-        OvertoneSynth::make(0, OvertoneSynthSettings { synths });
+    type TheSynth = OvertoneSynth<SynthWithEffect<SineSynth, ExponentialDecay>, 4>;
+
+    let mut synth = SynthWithEffect::<TheSynth, LowPassFilter>::make(
+        0,
+        SynthWithEffectSettings::<TheSynth, LowPassFilter> {
+            synth: OvertoneSynthSettings { synths },
+            effect: LowPassFilterSettings {
+                alpha: compute_alpha(1000., SAMPLE_RATE.raw()),
+            },
+        },
+    );
 
     let mut sample = 0i16;
 
@@ -163,9 +176,9 @@ fn synth_core(sys_freq: u32) -> ! {
         for (i, e) in next_tx_buf.iter_mut().enumerate() {
             if i % 2 == 0 {
                 sample = synth.next().to_bits();
-                *e = sample as u32 / 4;
+                *e = (sample as u32) >> 4;
             } else {
-                *e = sample as u32 / 4;
+                *e = (sample as u32) >> 4;
             }
             *e <<= 16;
         }

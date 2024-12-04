@@ -19,6 +19,21 @@ pub struct SynthWithEffectSettings<S: Synth, E: Effect> {
     pub effect: E::Settings,
 }
 
+impl<S, E> Default for SynthWithEffectSettings<S, E>
+where
+    S: Synth,
+    E: Effect,
+    S::Settings: Default,
+    E::Settings: Default,
+{
+    fn default() -> Self {
+        Self {
+            synth: S::Settings::default(),
+            effect: E::Settings::default(),
+        }
+    }
+}
+
 impl<S: Synth, E: Effect> Synth for SynthWithEffect<S, E> {
     type Settings = SynthWithEffectSettings<S, E>;
 

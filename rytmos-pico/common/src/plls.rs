@@ -32,11 +32,3 @@ pub const SYS_PLL_CONFIG_307P2MHZ: PLLConfig = PLLConfig {
     post_div1: 5,
     post_div2: 1,
 };
-
-#[allow(dead_code)]
-pub const SYS_PLL_CONFIG_384MHZ: PLLConfig = PLLConfig {
-    vco_freq: HertzU32::MHz(1536),
-    refdiv: 1,
-    post_div1: 4,
-    post_div2: 1,
-};

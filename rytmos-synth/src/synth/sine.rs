@@ -37,6 +37,9 @@ pub struct SineSynthSettings {
     /// Initial phase of the sine wave
     #[derivative(Default(value = "I1F15::from_num(0.0)"))]
     pub initial_phase: I1F15,
+    /// Whether to do linear interpolation between samples to smooth out the sine.
+    #[derivative(Default(value = "true"))]
+    pub do_lerp: bool,
 }
 
 impl Synth for SineSynth {
@@ -90,18 +93,23 @@ impl Synth for SineSynth {
             (idx, _) => idx + 1,
         };
 
-        let a = SINE_WAVE[idx];
-        let b = SINE_WAVE[next_idx];
-        let t = if flip_index {
-            I1F15::MAX - fractional_part
-        } else {
-            fractional_part
-        };
+        let sample = if self.settings.do_lerp {
+            let a = SINE_WAVE[idx];
+            let b = SINE_WAVE[next_idx];
+            let t = if flip_index {
+                I1F15::MAX - fractional_part
+            } else {
+                fractional_part
+            };
 
-        let sample = (Self::lerp(a, b, t) << self.gain) * sign;
+            (Self::lerp(a, b, t) << self.gain) * sign
+        } else {
+            (SINE_WAVE[idx] << self.gain) * sign
+        };
 
         (self.phase, _) = self.phase.overflowing_add(self.phase_inc * 2 + self.bend);
 
+        // TODO: 70 cycles, should be skipped if gains are 1
         let out_sample = FixedI32::<U15>::from(sample)
             .saturating_mul(FixedI32::<U15>::from(self.settings.extra_attack_gain))
             .saturating_mul(FixedI32::<U15>::from(self.velocity))
