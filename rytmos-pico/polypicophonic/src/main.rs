@@ -7,43 +7,19 @@
 pub static BOOT2_FIRMWARE: [u8; 256] = rp2040_boot2::BOOT_LOADER_W25Q080;
 
 use core::cell::RefCell;
-use core::fmt::Write;
-use core::str::FromStr;
 use core::u32;
 
 use cortex_m::{interrupt::Mutex, singleton};
 use defmt::{error, info, warn};
 use defmt_rtt as _;
-use embedded_graphics::mono_font::ascii::FONT_5X7;
-// use embedded_graphics::mono_font::ascii::FONT_4X6;
-use embedded_graphics::mono_font::ascii::FONT_6X10;
-use embedded_graphics::mono_font::iso_8859_10::FONT_4X6;
-use embedded_graphics::mono_font::MonoTextStyle;
-use embedded_graphics::pixelcolor::BinaryColor;
-use embedded_graphics::pixelcolor::Rgb565;
-use embedded_graphics::prelude::DrawTarget;
-use embedded_graphics::prelude::Point;
-use embedded_graphics::prelude::Primitive;
-use embedded_graphics::prelude::Size;
-use embedded_graphics::primitives::PrimitiveStyleBuilder;
-use embedded_graphics::primitives::Rectangle;
-use embedded_graphics::text::Text;
-use embedded_graphics::Drawable;
 use embedded_hal::digital::v2::InputPin;
 use fixed::types::I1F15;
 use fixed::types::U4F4;
-use fixed::types::U8F8;
 use fugit::Duration;
 use fugit::HertzU32;
-use fugit::RateExtU32;
-use heapless::Deque;
-use heapless::String;
 use heapless::Vec;
 use panic_probe as _;
 use pio_proc::pio_file;
-use rp_pico::hal::gpio::FunctionI2c;
-use rp_pico::hal::gpio::PullUp;
-use rp_pico::hal::I2C;
 use rp_pico::{
     entry,
     hal::{
@@ -64,29 +40,14 @@ use rp_pico::{
 use rytmos_synth::effect::linear_decay::LinearDecay;
 use rytmos_synth::effect::linear_decay::LinearDecaySettings;
 use rytmos_synth::synth::composed::polyphonic::PolyphonicSynth;
-use sh1106::{prelude::*, Builder};
 
 use rytmos_engrave::{a, ais, b, c, cis, d, dis, e, f, fis, g, gis};
 use rytmos_synth::commands::CommandMessage;
-use rytmos_synth::effect::exponential_decay::ExponentialDecay;
-use rytmos_synth::effect::exponential_decay::ExponentialDecaySettings;
-use rytmos_synth::effect::lpf::compute_alpha;
-use rytmos_synth::effect::lpf::LowPassFilter;
-use rytmos_synth::effect::lpf::LowPassFilterSettings;
-use rytmos_synth::effect::Effect;
-use rytmos_synth::synth::composed::overtone::OvertoneSynth;
-use rytmos_synth::synth::composed::overtone::OvertoneSynthSettings;
 use rytmos_synth::synth::composed::synth_with_effects::SynthWithEffect;
 use rytmos_synth::synth::composed::synth_with_effects::SynthWithEffectSettings;
 use rytmos_synth::synth::sine::SineSynth;
 use rytmos_synth::synth::sine::SineSynthSettings;
-use rytmos_synth::{
-    commands::Command,
-    synth::{
-        sawtooth::{SawtoothSynth, SawtoothSynthSettings},
-        Synth,
-    },
-};
+use rytmos_synth::{commands::Command, synth::Synth};
 
 use common::consts::*;
 use common::debouncer::Debouncer;
@@ -171,15 +132,12 @@ fn synth_core(sys_freq: u32) -> ! {
 
     let mut warned = false;
 
-    // TODO: build a note scheduler that runs in this thread that can provide accurately timed notes.
-    // Introduces new commands that address a scheduler and schedule other commands
-
     loop {
         sio.fifo
             .read()
             .and_then(Command::deserialize)
             .inspect(|&command| {
-                info!("{:?}", command);
+                // info!("{:?}", command);
                 synth.run_command(command)
             });
 
@@ -291,25 +249,9 @@ fn main() -> ! {
     info!("Start I/O thread.");
 
     let mut octave = 4;
-    let attack_scaler: U4F4 = U4F4::from_num(1.2);
-    let mut attack = U4F4::from_num(1.0);
+    let attack = U4F4::from_num(1.0);
 
     let mut button_states = [false; 12];
-
-    let i2c = I2C::i2c0(
-        pac.I2C0,
-        pins.gpio20.reconfigure::<FunctionI2c, PullUp>(),
-        pins.gpio21.reconfigure::<FunctionI2c, PullUp>(),
-        400.kHz(),
-        &mut pac.RESETS,
-        125_000_000.Hz(),
-    );
-
-    let mut display: GraphicsMode<_> = Builder::new().connect_i2c(i2c).into();
-
-    let mut console = Sh1106Console::new();
-
-    display.init().unwrap();
 
     loop {
         fn0_debouncer.update(fn0_pin.is_low().unwrap());
@@ -441,41 +383,7 @@ fn main() -> ! {
             octave = 4
         }
 
-        if let Ok(true) = fn1_debouncer.is_high() {
-            if cis_debouncer.stable_rising_edge() {
-                let new_attack = attack.saturating_mul(attack_scaler);
-                if new_attack == attack && new_attack != U4F4::MAX {
-                    attack = U4F4::from_bits(attack.to_bits() + 1);
-                } else {
-                    attack = new_attack
-                }
-                let mut log_line = String::new();
-                write!(log_line, "Attack: {}", attack.to_bits()).unwrap();
-                console.log(log_line);
-            }
-            if c_debouncer.stable_rising_edge() {
-                attack = attack
-                    .saturating_div(attack_scaler)
-                    .max(U4F4::from_bits(0b1));
-                let mut log_line = String::new();
-                write!(log_line, "Attack: {}", attack.to_bits()).unwrap();
-                console.log(log_line);
-            }
-        }
-
         button_states = new_button_states;
-
-        let style = PrimitiveStyleBuilder::new()
-            .fill_color(BinaryColor::Off)
-            .build();
-
-        Rectangle::new(Point::new(0, 0), Size::new(128, 64))
-            .into_styled(style)
-            .draw(&mut display)
-            .unwrap();
-
-        console.draw(&mut display).unwrap();
-        display.flush().unwrap(); // TODO: too slow, make buttons interrupt based
     }
 }
 
@@ -495,40 +403,3 @@ const FN_0: usize = 12;
 const FN_1: usize = 13;
 const FN_2: usize = 14;
 const FN_3: usize = 15;
-
-// TODO: use IO_IRQ_BANK0 to add interrupts on the pins with buttons to handle input so the main thread can be used for graphics.
-
-pub struct Sh1106Console {
-    lines: Deque<String<25>, 9>,
-}
-
-impl Sh1106Console {
-    pub fn new() -> Self {
-        let mut deque = Deque::new();
-        while !deque.is_full() {
-            deque.push_back(String::from_str(">").unwrap()).unwrap();
-        }
-        Self { lines: deque }
-    }
-
-    pub fn draw<D>(&mut self, target: &mut D) -> Result<(), D::Error>
-    where
-        D: DrawTarget<Color = BinaryColor>,
-    {
-        let style = MonoTextStyle::new(&FONT_4X6, BinaryColor::On);
-
-        for (y, line) in self.lines.iter().enumerate() {
-            Text::new(line, Point::new(0, 6 + 6 * y as i32), style).draw(target)?;
-        }
-
-        Ok(())
-    }
-
-    pub fn log(&mut self, string: String<25>) {
-        if self.lines.is_full() {
-            self.lines.pop_front();
-        }
-
-        self.lines.push_back(string).unwrap();
-    }
-}

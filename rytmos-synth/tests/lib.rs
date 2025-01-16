@@ -18,6 +18,7 @@ use rytmos_synth::{
     synth::{
         composed::{
             overtone::{OvertoneSynth, OvertoneSynthSettings},
+            polyphonic::PolyphonicSynth,
             synth_with_effects::{SynthWithEffect, SynthWithEffectSettings},
         },
         metronome::MetronomeSynth,
@@ -209,6 +210,39 @@ fn test_metronome() {
     }
 
     plot_samples(&samples[..70000]).unwrap();
+    export_to_wav(samples, "signal.wav");
+}
+
+#[test]
+fn test_polyphonic_synth() {
+    init_logger();
+
+    type Synth = SynthWithEffect<SineSynth, LinearDecay>;
+
+    let settings = SynthWithEffectSettings::<SineSynth, LinearDecay> {
+        synth: SineSynthSettings::default(),
+        effect: LinearDecaySettings {
+            decay: I1F15::from_num(0.0005),
+            decay_every: 32,
+        },
+    };
+    let mut synth = PolyphonicSynth::<4, Synth>::make(0, settings);
+
+    synth.play(a!(4), U4F4::from_num(1.));
+
+    let samples: Vec<i16> = (0..(SAMPLE_RATE as usize * 3))
+        .map(|i| {
+            if i == SAMPLE_RATE as usize {
+                synth.play(cis!(5), U4F4::from_num(1));
+            }
+            if i == SAMPLE_RATE as usize * 2 {
+                synth.play(e!(5), U4F4::from_num(1));
+            }
+            synth.next().to_bits()
+        })
+        .collect();
+
+    plot_samples(&samples[..72000]).unwrap();
     export_to_wav(samples, "signal.wav");
 }
 

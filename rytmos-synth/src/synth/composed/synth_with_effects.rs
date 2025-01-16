@@ -19,6 +19,19 @@ pub struct SynthWithEffectSettings<S: Synth, E: Effect> {
     pub effect: E::Settings,
 }
 
+impl<S: Synth, E: Effect> Clone for SynthWithEffectSettings<S, E>
+where
+    S::Settings: Clone,
+    E::Settings: Clone,
+{
+    fn clone(&self) -> Self {
+        Self {
+            synth: self.synth.clone(),
+            effect: self.effect.clone(),
+        }
+    }
+}
+
 impl<S, E> Default for SynthWithEffectSettings<S, E>
 where
     S: Synth,

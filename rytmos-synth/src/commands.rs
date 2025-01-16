@@ -20,6 +20,34 @@ pub struct Command {
     pub message: CommandMessage,
 }
 
+impl defmt::Format for Command {
+    fn format(&self, fmt: defmt::Formatter) {
+        defmt::write!(fmt, "Command {{ address: {}, message: ", self.address);
+
+        match &self.message {
+            CommandMessage::Play(note, velocity) => {
+                defmt::write!(
+                    fmt,
+                    "Play(Note: {:?}, Velocity: {:?})",
+                    note,
+                    velocity.to_num::<f32>()
+                );
+            }
+            CommandMessage::SetAttack(attack) => {
+                defmt::write!(fmt, "SetAttack({:?})", attack.to_num::<f32>());
+            }
+            CommandMessage::Tick(emphasis) => {
+                defmt::write!(fmt, "Tick({})", emphasis);
+            }
+            CommandMessage::SetTempo(tempo) => {
+                defmt::write!(fmt, "SetTempo({})", tempo);
+            }
+        }
+
+        defmt::write!(fmt, " }}");
+    }
+}
+
 impl Command {
     pub fn serialize(&self) -> u32 {
         let address = self.address & 0b1111;
