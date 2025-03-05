@@ -13,7 +13,7 @@ pub struct LowPassFilter {
 
 #[derive(Derivative)]
 #[derivative(Default)]
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct LowPassFilterSettings {
     #[derivative(Default(value = "I1F15::from_num(0.05)"))]
     pub alpha: I1F15,

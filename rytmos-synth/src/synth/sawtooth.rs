@@ -17,13 +17,13 @@ pub struct SawtoothSynth {
     sample_counter: u32,
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct SawtoothSynthSettings {}
 
 impl Synth for SawtoothSynth {
-    type Settings = ();
+    type Settings = SawtoothSynthSettings;
 
-    fn make(address: u32, settings: Self::Settings) -> Self {
+    fn make(address: u32, _: Self::Settings) -> Self {
         Self {
             address,
             settings: SawtoothSynthSettings {},
@@ -34,7 +34,7 @@ impl Synth for SawtoothSynth {
         }
     }
 
-    fn configure(&mut self, (): Self::Settings) {}
+    fn configure(&mut self, _: Self::Settings) {}
 
     fn play(&mut self, note: rytmos_engrave::staff::Note, velocity: U4F4) {
         self.velocity = velocity.into();

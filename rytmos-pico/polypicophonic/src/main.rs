@@ -37,21 +37,24 @@ use rp_pico::{
     },
     pac,
 };
-use rytmos_synth::effect::linear_decay::LinearDecay;
-use rytmos_synth::effect::linear_decay::LinearDecaySettings;
-use rytmos_synth::synth::composed::polyphonic::PolyphonicSynth;
-
-use rytmos_engrave::{a, ais, b, c, cis, d, dis, e, f, fis, g, gis};
-use rytmos_synth::commands::CommandMessage;
-use rytmos_synth::synth::composed::synth_with_effects::SynthWithEffect;
-use rytmos_synth::synth::composed::synth_with_effects::SynthWithEffectSettings;
-use rytmos_synth::synth::sine::SineSynth;
-use rytmos_synth::synth::sine::SineSynthSettings;
-use rytmos_synth::{commands::Command, synth::Synth};
 
 use common::consts::*;
 use common::debouncer::Debouncer;
 use common::plls;
+use rytmos_engrave::{a, ais, b, c, cis, d, dis, e, f, fis, g, gis};
+use rytmos_synth::commands::CommandMessage;
+use rytmos_synth::effect::linear_decay::LinearDecay;
+use rytmos_synth::effect::linear_decay::LinearDecaySettings;
+use rytmos_synth::effect::lpf::LowPassFilter;
+use rytmos_synth::effect::lpf::LowPassFilterSettings;
+use rytmos_synth::synth::composed::polyphonic::PolyphonicSynth;
+use rytmos_synth::synth::composed::synth_with_effects::SynthWithEffect;
+use rytmos_synth::synth::composed::synth_with_effects::SynthWithEffectSettings;
+use rytmos_synth::synth::sawtooth::SawtoothSynth;
+use rytmos_synth::synth::sawtooth::SawtoothSynthSettings;
+use rytmos_synth::synth::sine::SineSynth;
+use rytmos_synth::synth::sine::SineSynthSettings;
+use rytmos_synth::{commands::Command, synth::Synth};
 
 static mut CORE1_STACK: Stack<4096> = Stack::new();
 
@@ -116,15 +119,22 @@ fn synth_core(sys_freq: u32) -> ! {
     info!("Start Synth core.");
 
     // type Synth = SynthWithEffect<SynthWithEffect<SineSynth, LinearDecay>, LowPassFilter>;
-    type Synth = SynthWithEffect<SineSynth, LinearDecay>;
+    type WaveSynth = SineSynth;
+    type Synth = SynthWithEffect<SynthWithEffect<WaveSynth, LinearDecay>, LowPassFilter>;
 
-    let settings = SynthWithEffectSettings::<SineSynth, LinearDecay> {
-        synth: SineSynthSettings::default(),
-        effect: LinearDecaySettings {
-            decay: I1F15::from_num(0.0005),
-            decay_every: 32,
-        },
-    };
+    let settings =
+        SynthWithEffectSettings::<SynthWithEffect<WaveSynth, LinearDecay>, LowPassFilter> {
+            synth: SynthWithEffectSettings::<WaveSynth, LinearDecay> {
+                synth: SineSynthSettings::default(),
+                effect: LinearDecaySettings {
+                    decay: I1F15::from_num(0.0005),
+                    decay_every: 32,
+                },
+            },
+            effect: LowPassFilterSettings {
+                alpha: I1F15::from_num(0.05),
+            },
+        };
 
     let mut synth = PolyphonicSynth::<4, Synth>::make(0, settings);
 
@@ -290,75 +300,75 @@ fn main() -> ! {
         // Of length four because the SIO fifo is length four
         let mut messages: Vec<CommandMessage, 4> = Vec::new();
         if new_button_states[NOTE_C] && !button_states[NOTE_C] {
-            messages.push(CommandMessage::Play(c!(octave), U4F4::from_num(attack)));
+            let _ = messages.push(CommandMessage::Play(c!(octave), U4F4::from_num(attack)));
         } else if !new_button_states[NOTE_C] && button_states[NOTE_C] {
-            messages.push(CommandMessage::Play(c!(octave), U4F4::from_num(0)));
+            let _ = messages.push(CommandMessage::Play(c!(octave), U4F4::from_num(0)));
         }
 
         if new_button_states[NOTE_CIS] && !button_states[NOTE_CIS] {
-            messages.push(CommandMessage::Play(cis!(octave), U4F4::from_num(attack)));
+            let _ = messages.push(CommandMessage::Play(cis!(octave), U4F4::from_num(attack)));
         } else if !new_button_states[NOTE_CIS] && button_states[NOTE_CIS] {
-            messages.push(CommandMessage::Play(cis!(octave), U4F4::from_num(0)));
+            let _ = messages.push(CommandMessage::Play(cis!(octave), U4F4::from_num(0)));
         }
 
         if new_button_states[NOTE_D] && !button_states[NOTE_D] {
-            messages.push(CommandMessage::Play(d!(octave), U4F4::from_num(attack)));
+            let _ = messages.push(CommandMessage::Play(d!(octave), U4F4::from_num(attack)));
         } else if !new_button_states[NOTE_D] && button_states[NOTE_D] {
-            messages.push(CommandMessage::Play(d!(octave), U4F4::from_num(0)));
+            let _ = messages.push(CommandMessage::Play(d!(octave), U4F4::from_num(0)));
         }
 
         if new_button_states[NOTE_DIS] && !button_states[NOTE_DIS] {
-            messages.push(CommandMessage::Play(dis!(octave), U4F4::from_num(attack)));
+            let _ = messages.push(CommandMessage::Play(dis!(octave), U4F4::from_num(attack)));
         } else if !new_button_states[NOTE_DIS] && button_states[NOTE_DIS] {
-            messages.push(CommandMessage::Play(dis!(octave), U4F4::from_num(0)));
+            let _ = messages.push(CommandMessage::Play(dis!(octave), U4F4::from_num(0)));
         }
 
         if new_button_states[NOTE_E] && !button_states[NOTE_E] {
-            messages.push(CommandMessage::Play(e!(octave), U4F4::from_num(attack)));
+            let _ = messages.push(CommandMessage::Play(e!(octave), U4F4::from_num(attack)));
         } else if !new_button_states[NOTE_E] && button_states[NOTE_E] {
-            messages.push(CommandMessage::Play(e!(octave), U4F4::from_num(0)));
+            let _ = messages.push(CommandMessage::Play(e!(octave), U4F4::from_num(0)));
         }
 
         if new_button_states[NOTE_F] && !button_states[NOTE_F] {
-            messages.push(CommandMessage::Play(f!(octave), U4F4::from_num(attack)));
+            let _ = messages.push(CommandMessage::Play(f!(octave), U4F4::from_num(attack)));
         } else if !new_button_states[NOTE_F] && button_states[NOTE_F] {
-            messages.push(CommandMessage::Play(f!(octave), U4F4::from_num(0)));
+            let _ = messages.push(CommandMessage::Play(f!(octave), U4F4::from_num(0)));
         }
 
         if new_button_states[NOTE_FIS] && !button_states[NOTE_FIS] {
-            messages.push(CommandMessage::Play(fis!(octave), U4F4::from_num(attack)));
+            let _ = messages.push(CommandMessage::Play(fis!(octave), U4F4::from_num(attack)));
         } else if !new_button_states[NOTE_FIS] && button_states[NOTE_FIS] {
-            messages.push(CommandMessage::Play(fis!(octave), U4F4::from_num(0)));
+            let _ = messages.push(CommandMessage::Play(fis!(octave), U4F4::from_num(0)));
         }
 
         if new_button_states[NOTE_G] && !button_states[NOTE_G] {
-            messages.push(CommandMessage::Play(g!(octave), U4F4::from_num(attack)));
+            let _ = messages.push(CommandMessage::Play(g!(octave), U4F4::from_num(attack)));
         } else if !new_button_states[NOTE_G] && button_states[NOTE_G] {
-            messages.push(CommandMessage::Play(g!(octave), U4F4::from_num(0)));
+            let _ = messages.push(CommandMessage::Play(g!(octave), U4F4::from_num(0)));
         }
 
         if new_button_states[NOTE_GIS] && !button_states[NOTE_GIS] {
-            messages.push(CommandMessage::Play(gis!(octave), U4F4::from_num(attack)));
+            let _ = messages.push(CommandMessage::Play(gis!(octave), U4F4::from_num(attack)));
         } else if !new_button_states[NOTE_GIS] && button_states[NOTE_GIS] {
-            messages.push(CommandMessage::Play(gis!(octave), U4F4::from_num(0)));
+            let _ = messages.push(CommandMessage::Play(gis!(octave), U4F4::from_num(0)));
         }
 
         if new_button_states[NOTE_A] && !button_states[NOTE_A] {
-            messages.push(CommandMessage::Play(a!(octave), U4F4::from_num(attack)));
+            let _ = messages.push(CommandMessage::Play(a!(octave), U4F4::from_num(attack)));
         } else if !new_button_states[NOTE_A] && button_states[NOTE_A] {
-            messages.push(CommandMessage::Play(a!(octave), U4F4::from_num(0)));
+            let _ = messages.push(CommandMessage::Play(a!(octave), U4F4::from_num(0)));
         }
 
         if new_button_states[NOTE_AIS] && !button_states[NOTE_AIS] {
-            messages.push(CommandMessage::Play(ais!(octave), U4F4::from_num(attack)));
+            let _ = messages.push(CommandMessage::Play(ais!(octave), U4F4::from_num(attack)));
         } else if !new_button_states[NOTE_AIS] && button_states[NOTE_AIS] {
-            messages.push(CommandMessage::Play(ais!(octave), U4F4::from_num(0)));
+            let _ = messages.push(CommandMessage::Play(ais!(octave), U4F4::from_num(0)));
         }
 
         if new_button_states[NOTE_B] && !button_states[NOTE_B] {
-            messages.push(CommandMessage::Play(b!(octave), U4F4::from_num(attack)));
+            let _ = messages.push(CommandMessage::Play(b!(octave), U4F4::from_num(attack)));
         } else if !new_button_states[NOTE_B] && button_states[NOTE_B] {
-            messages.push(CommandMessage::Play(b!(octave), U4F4::from_num(0)));
+            let _ = messages.push(CommandMessage::Play(b!(octave), U4F4::from_num(0)));
         }
 
         for message in messages {
