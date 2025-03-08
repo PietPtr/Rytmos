@@ -10,7 +10,6 @@ use super::{run_play_command, Synth};
 
 pub struct SawtoothSynth {
     address: u32,
-    settings: SawtoothSynthSettings,
     increment: I1F15, // Computed from frequency
     sample: I1F15, // store the sample way more precise than needed so we can do more exact increments
     velocity: U8F8,
@@ -26,7 +25,6 @@ impl Synth for SawtoothSynth {
     fn make(address: u32, _: Self::Settings) -> Self {
         Self {
             address,
-            settings: SawtoothSynthSettings {},
             increment: I1F15::from_num(0),
             sample: I1F15::from_num(0),
             velocity: U8F8::from_num(0),

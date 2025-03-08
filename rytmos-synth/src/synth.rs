@@ -4,9 +4,11 @@ use rytmos_engrave::staff::Note;
 use crate::commands::{Command, CommandMessage};
 
 pub mod composed;
+pub mod drum;
 pub mod master;
 pub mod metronome;
 pub mod nothing;
+pub mod sample;
 pub mod samples;
 pub mod sawtooth;
 pub mod sine;

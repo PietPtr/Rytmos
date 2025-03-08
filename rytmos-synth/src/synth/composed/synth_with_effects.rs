@@ -81,16 +81,3 @@ impl<S: Synth, E: Effect> Synth for SynthWithEffect<S, E> {
         self.synth.address() | self.effect.address()
     }
 }
-
-// fn decaying_sine_synth(
-//     address: u32,
-//     synth_settings: SineSynthSettings,
-//     decay_settings: LinearDecaySettings,
-// ) -> SynthWithEffect<SineSynth, LinearDecay> {
-//     type ThisSynth = SynthWithEffect<SineSynth, LinearDecay>;
-
-//     ThisSynth::new(
-//         SineSynth::new(address, synth_settings),
-//         LinearDecay::new(address, decay_settings),
-//     )
-// }

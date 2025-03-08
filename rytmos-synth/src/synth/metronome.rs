@@ -21,12 +21,14 @@ enum Sample {
     Weak,
 }
 
+// TODO: refactor to use 2 sample synths internally
+
 impl MetronomeSynth {}
 
 impl Synth for MetronomeSynth {
     type Settings = ();
 
-    fn make(address: u32, settings: Self::Settings) -> Self {
+    fn make(address: u32, _settings: Self::Settings) -> Self {
         Self {
             address,
             sample: 0,

@@ -1,4 +1,4 @@
-use defmt::{info, warn};
+use defmt::warn;
 use fixed::types::{I1F15, U4F4};
 use heapless::Vec;
 use rytmos_engrave::staff::Note;
@@ -7,9 +7,9 @@ use rytmos_engrave::staff::Note;
 const fn ceil_log2(mut n: usize) -> u32 {
     let mut bits = 0;
     if n == 0 {
-        return 0; // log2(0) is undefined, return 0 or handle as needed
+        return 0;
     }
-    n -= 1; // Ceiling adjustment
+    n -= 1;
     while n > 0 {
         n >>= 1;
         bits += 1;

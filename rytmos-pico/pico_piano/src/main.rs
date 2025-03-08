@@ -171,9 +171,6 @@ fn synth_core(sys_freq: u32) -> ! {
 
     let mut warned = false;
 
-    // TODO: build a note scheduler that runs in this thread that can provide accurately timed notes.
-    // Introduces new commands that address a scheduler and schedule other commands
-
     loop {
         sio.fifo
             .read()

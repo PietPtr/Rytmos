@@ -1,4 +1,4 @@
-use std::sync::Once;
+use std::{fs::File, sync::Once};
 
 use fixed::{
     types::{extra::U15, I1F15, U14F2, U4F4},
@@ -21,9 +21,10 @@ use rytmos_synth::{
             polyphonic::PolyphonicSynth,
             synth_with_effects::{SynthWithEffect, SynthWithEffectSettings},
         },
+        drum::{self, DrumSynth, DrumSynthSettings},
         metronome::MetronomeSynth,
         samples::weak::WEAK_WAV_44100,
-        sawtooth::SawtoothSynth,
+        sawtooth::{SawtoothSynth, SawtoothSynthSettings},
         sine::{SineSynth, SineSynthSettings},
         vibrato::{VibratoSynth, VibratoSynthSettings},
         Synth, SAMPLE_RATE,
@@ -299,7 +300,7 @@ fn test_overtone_synth() {
 fn test_sawtooth_synth() {
     init_logger();
 
-    let mut synth = SawtoothSynth::make(0x0, ());
+    let mut synth = SawtoothSynth::make(0x0, SawtoothSynthSettings {});
 
     synth.play(a!(4), U4F4::from_num(1.01));
 
@@ -600,7 +601,6 @@ fn convert_i16_table_to_i1f15() {
 }
 
 #[test]
-
 fn resample_and_print() {
     let input_rate = 44100;
     let output_rate = 24000;
@@ -628,4 +628,79 @@ fn resample_and_print() {
     }
 }
 
+#[test]
+fn test_drum_synth() {
+    init_logger();
+
+    let mut synth = DrumSynth::make(0, DrumSynthSettings {});
+
+    let mut samples = vec![];
+
+    const V1: U4F4 = U4F4::unwrapped_from_str("1.0");
+
+    macro_rules! delay {
+        () => {
+            samples.append(
+                &mut (0..5000)
+                    .map(|_| synth.next().to_bits())
+                    .collect::<Vec<_>>(),
+            );
+        };
+    }
+
+    for _ in 0..4 {
+        synth.play(drum::KICK_NOTE, V1);
+        synth.play(drum::HIHAT_NOTE, V1);
+        delay!();
+        synth.play(drum::HIHAT_NOTE, V1);
+        delay!();
+        synth.play(drum::SNARE_NOTE, V1);
+        synth.play(drum::HIHAT_NOTE, V1);
+        delay!();
+        synth.play(drum::HIHAT_NOTE, V1);
+        delay!();
+        synth.play(drum::KICK_NOTE, V1);
+        synth.play(drum::HIHAT_NOTE, V1);
+        delay!();
+        synth.play(drum::HIHAT_NOTE, V1);
+        delay!();
+        synth.play(drum::SNARE_NOTE, V1);
+        synth.play(drum::HIHAT_NOTE, V1);
+        delay!();
+        synth.play(drum::HIHAT_NOTE, V1);
+        delay!();
+    }
+
+    plot_samples(&samples[..70000]).unwrap();
+    export_to_wav(samples, "signal.wav");
+}
+
 // TODO: split up this file into hacks for constants and synth tests and helpers.
+
+#[test]
+fn wav2consts() {
+    use std::io::Write;
+
+    let path = "/tmp/kick.wav".to_string();
+    let mut file = File::create(path.clone() + ".rs").unwrap();
+
+    let mut reader = hound::WavReader::open(path).expect("Failed to open WAV file");
+
+    let sample_len = reader.samples::<i16>().len();
+    for sample in reader.samples::<i16>() {
+        match sample {
+            Ok(value) => {
+                let converted = I1F15::wrapping_from_num(value as f32 / i16::MAX as f32);
+                writeln!(
+                    file,
+                    "I1F15::from_bits({:#018b}u16 as i16),",
+                    converted.to_bits()
+                )
+                .unwrap();
+            }
+            Err(e) => eprintln!("Error reading sample: {}", e),
+        }
+    }
+
+    println!("sample_len={sample_len}");
+}
