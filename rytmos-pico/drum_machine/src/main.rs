@@ -13,10 +13,8 @@ use cortex_m::{interrupt::Mutex, singleton};
 #[allow(unused_imports)]
 use defmt::{error, info, warn};
 use defmt_rtt as _;
-use fugit::Duration;
-use fugit::HertzU32;
-use panic_probe as _;
-use rp_pico::{
+use drum_machine::io::DrumIO;
+use drum_machine_bsp::{
     entry,
     hal::{
         clocks::{Clock, ClockSource, ClocksManager, InitError},
@@ -33,6 +31,9 @@ use rp_pico::{
     },
     pac,
 };
+use fugit::Duration;
+use fugit::HertzU32;
+use panic_probe as _;
 use rytmos_synth::commands::Command;
 
 use common::consts::*;
@@ -66,12 +67,12 @@ fn synth_core(sys_freq: u32) -> ! {
     let pio_i2s_mclk_output = pio.install(&pio_i2s_mclk_output).unwrap();
     let pio_i2s_send_master = pio.install(&pio_i2s_send_master).unwrap();
 
-    let (mut sm0, _rx0, _tx0) = PIOBuilder::from_program(pio_i2s_mclk_output)
+    let (mut sm0, _rx0, _tx0) = PIOBuilder::from_installed_program(pio_i2s_mclk_output)
         .set_pins(i2s_sck_pin.id().num, 1)
         .clock_divisor_fixed_point(MCLK_CLOCKDIV_INT, MCLK_CLOCKDIV_FRAC)
         .build(sm0);
 
-    let (mut sm1, _rx1, tx1) = PIOBuilder::from_program(pio_i2s_send_master)
+    let (mut sm1, _rx1, tx1) = PIOBuilder::from_installed_program(pio_i2s_send_master)
         .out_pins(i2s_din_pin.id().num, 1)
         .side_set_pin_base(i2s_bck_pin.id().num)
         .clock_divisor_fixed_point(I2S_PIO_CLOCKDIV_INT, I2S_PIO_CLOCKDIV_FRAC)
@@ -147,7 +148,7 @@ fn main() -> ! {
 
     let mut _delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().to_Hz());
 
-    let pins = gpio::Pins::new(
+    let pins = drum_machine_bsp::Pins::new(
         pac.IO_BANK0,
         pac.PADS_BANK0,
         sio.gpio_bank0,
@@ -159,7 +160,7 @@ fn main() -> ! {
     let mut mc = Multicore::new(&mut pac.PSM, &mut pac.PPB, &mut sio.fifo);
     let cores = mc.cores();
     let core1 = &mut cores[1];
-    let _test = core1.spawn(unsafe { &mut CORE1_STACK.mem }, move || {
+    let _test = core1.spawn(unsafe { CORE1_STACK.take().unwrap() }, move || {
         synth_core(sys_freq)
     });
 
@@ -178,6 +179,8 @@ fn main() -> ! {
     });
 
     info!("Start I/O thread.");
+
+    let io = DrumIO::new(pins);
 
     loop {}
 }

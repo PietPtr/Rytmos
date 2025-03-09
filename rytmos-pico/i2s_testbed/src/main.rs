@@ -154,7 +154,7 @@ fn synth_core(sys_freq: u32) -> ! {
 
     // TIME: average=5us (0.75%) min=5us (0.75%) max=7us (1.05%)
     // CYCLES: average=1806 (112) min=1732 max=1883
-    let sawtooth = SawtoothSynth::make(0, ());
+    let sawtooth = SawtoothSynth::make(0, SawtoothSynthSettings {});
 
     // TIME: average=44us (6.6%) min=27us (4.05%) max=61us (9.15%)
     // CYCLES: average=13672 (854) min=8197 max=18561
