@@ -27,7 +27,7 @@ use drum_machine_bsp::{
         timer::{Alarm, Alarm1},
         watchdog::Watchdog,
         xosc::setup_xosc_blocking,
-        Timer,
+        Adc, Timer,
     },
     pac,
 };
@@ -180,7 +180,7 @@ fn main() -> ! {
 
     info!("Start I/O thread.");
 
-    let io = DrumIO::new(pins);
+    let io = DrumIO::new(pins, Adc::new(pac.ADC, &mut pac.RESETS));
 
     loop {}
 }
