@@ -6,9 +6,6 @@
 #[used]
 pub static BOOT2_FIRMWARE: [u8; 256] = rp2040_boot2::BOOT_LOADER_W25Q080;
 
-use core::any::Any;
-use core::u32;
-
 use cortex_m::singleton;
 use defmt::*;
 use defmt_rtt as _;
@@ -328,7 +325,7 @@ fn main() -> ! {
 
     let mut clocks = ClocksManager::new(pac.CLOCKS);
 
-    common::setup_clocks!(pac, clocks);
+    common::setup_clocks!(pac, clocks, common::plls::SYS_PLL_CONFIG_307P2MHZ);
 
     let pins = gpio::Pins::new(
         pac.IO_BANK0,

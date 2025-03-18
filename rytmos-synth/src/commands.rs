@@ -176,11 +176,9 @@ impl Command {
             _ => None,
         };
 
-        message.and_then(|m| {
-            Some(Self {
-                address,
-                message: m,
-            })
+        message.map(|m| Self {
+            address,
+            message: m,
         })
     }
 }

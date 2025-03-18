@@ -7,7 +7,6 @@
 pub static BOOT2_FIRMWARE: [u8; 256] = rp2040_boot2::BOOT_LOADER_W25Q080;
 
 use core::cell::RefCell;
-use core::u32;
 
 use cortex_m::{interrupt::Mutex, singleton};
 use defmt::{error, info, warn};
@@ -40,7 +39,6 @@ use rp_pico::{
 
 use common::consts::*;
 use common::debouncer::Debouncer;
-use common::plls;
 use rytmos_engrave::{a, ais, b, c, cis, d, dis, e, f, fis, g, gis};
 use rytmos_synth::commands::CommandMessage;
 use rytmos_synth::effect::linear_decay::LinearDecay;
@@ -50,8 +48,6 @@ use rytmos_synth::effect::lpf::LowPassFilterSettings;
 use rytmos_synth::synth::composed::polyphonic::PolyphonicSynth;
 use rytmos_synth::synth::composed::synth_with_effects::SynthWithEffect;
 use rytmos_synth::synth::composed::synth_with_effects::SynthWithEffectSettings;
-use rytmos_synth::synth::sawtooth::SawtoothSynth;
-use rytmos_synth::synth::sawtooth::SawtoothSynthSettings;
 use rytmos_synth::synth::sine::SineSynth;
 use rytmos_synth::synth::sine::SineSynthSettings;
 use rytmos_synth::{commands::Command, synth::Synth};
@@ -185,7 +181,7 @@ fn main() -> ! {
 
     let mut clocks = ClocksManager::new(pac.CLOCKS);
 
-    common::setup_clocks!(pac, clocks);
+    common::setup_clocks!(pac, clocks, common::plls::SYS_PLL_CONFIG_307P2MHZ);
 
     let mut _delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().to_Hz());
 

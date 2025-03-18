@@ -9,7 +9,6 @@ pub static BOOT2_FIRMWARE: [u8; 256] = rp2040_boot2::BOOT_LOADER_W25Q080;
 use core::cell::RefCell;
 use core::fmt::Write;
 use core::str::FromStr;
-use core::u32;
 
 use cortex_m::{interrupt::Mutex, singleton};
 use defmt::{error, info, warn};
@@ -214,7 +213,7 @@ fn main() -> ! {
 
     let mut clocks = ClocksManager::new(pac.CLOCKS);
 
-    common::setup_clocks!(pac, clocks);
+    common::setup_clocks!(pac, clocks, common::plls::SYS_PLL_CONFIG_307P2MHZ);
 
     let mut _delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().to_Hz());
 

@@ -7,22 +7,15 @@
 pub static BOOT2_FIRMWARE: [u8; 256] = rp2040_boot2::BOOT_LOADER_W25Q080;
 
 use core::cell::RefCell;
-use core::u32;
 
 use crate::pac::interrupt;
-use common::plls;
 use cortex_m::{interrupt::Mutex, singleton};
 use defmt::*;
 use defmt_rtt as _;
-use embedded_hal::digital::v2::InputPin;
-use embedded_hal::digital::v2::OutputPin;
-use fixed::traits::Fixed;
 use fixed::types::U8F8;
 use fugit::Duration;
 use fugit::HertzU32;
-use fugit::RateExtU32;
 use heapless::Vec;
-use micromath::F32Ext;
 use panic_probe as _;
 use pio_proc::pio_file;
 use rp_pico::hal::timer::Alarm;

@@ -47,7 +47,7 @@ impl Effect for ExponentialDecay {
         self.decay_counter += 1;
 
         if self.decay_counter == self.settings.decay_every {
-            self.amplitude = self.amplitude * self.settings.decay;
+            self.amplitude *= self.settings.decay;
             self.decay_counter = 0;
         }
 

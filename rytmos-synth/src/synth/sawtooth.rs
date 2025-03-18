@@ -49,11 +49,9 @@ impl Synth for SawtoothSynth {
         self.sample = next_sample;
 
         // Apply gain
-        let out_sample = FixedI32::<U15>::from(next_sample)
+        FixedI32::<U15>::from(next_sample)
             .saturating_mul(FixedI32::<U15>::from(self.velocity))
-            .saturating_to_fixed::<I1F15>();
-
-        out_sample
+            .saturating_to_fixed::<I1F15>()
     }
 
     fn run_command(&mut self, command: Command) {

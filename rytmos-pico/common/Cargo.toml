@@ -7,7 +7,11 @@ edition = "2021"
 
 [dependencies]
 fugit = "0.3.7"
-rp-pico = { version = "0.8.0", default-features = false, features = ["rt", "critical-section-impl", "rom-func-cache"] }
+rp-pico = { version = "0.8.0", default-features = false, features = [
+    "rt",
+    "critical-section-impl",
+    "rom-func-cache",
+] }
 defmt = "0.3.5"
 pio = "0.2.1"
 pio-proc = "0.2.2"

@@ -1,6 +1,6 @@
 #[macro_export]
 macro_rules! setup_clocks {
-    ($pac:ident, $clocks:ident) => {
+    ($pac:ident, $clocks:ident, $config:expr) => {
         let xosc = setup_xosc_blocking($pac.XOSC, EXTERNAL_XTAL_FREQ_HZ)
             .map_err(InitError::XoscErr)
             .ok()
@@ -10,7 +10,7 @@ macro_rules! setup_clocks {
             let pll_sys = setup_pll_blocking(
                 $pac.PLL_SYS,
                 xosc.operating_frequency(),
-                plls::SYS_PLL_CONFIG_307P2MHZ,
+                $config,
                 &mut $clocks,
                 &mut $pac.RESETS,
             )

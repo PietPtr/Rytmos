@@ -67,8 +67,8 @@ impl Synth for SineSynth {
 
         let (sign, flip_index, modulo) = match self.phase {
             p if p >= I1F15::MIN && p < -0.5 => (-1, false, p + I1F15::MAX + I1F15::from_bits(1)), // +1
-            p if p >= -0.5 && p < 0.0 => (-1, true, p + OH_POINT_FIVE),
-            p if p >= 0.0 && p < 0.5 => (1, false, p),
+            p if (-0.5..0.0).contains(&p) => (-1, true, p + OH_POINT_FIVE),
+            p if (0.0..0.5).contains(&p) => (1, false, p),
             p if p >= 0.5 && p <= I1F15::MAX => (1, true, p - OH_POINT_FIVE),
             p => panic!("Impossible phase: {}", p),
         };
@@ -84,7 +84,7 @@ impl Synth for SineSynth {
         let idx = if flip_index {
             table_size - 1 - idx_in_part
         } else {
-            idx_in_part as usize
+            idx_in_part
         };
 
         let next_idx = match (idx, flip_index) {
@@ -110,12 +110,10 @@ impl Synth for SineSynth {
         (self.phase, _) = self.phase.overflowing_add(self.phase_inc * 2 + self.bend);
 
         // TODO: 70 cycles, should be skipped if gains are 1
-        let out_sample = FixedI32::<U15>::from(sample)
+        FixedI32::<U15>::from(sample)
             .saturating_mul(FixedI32::<U15>::from(self.settings.extra_attack_gain))
             .saturating_mul(FixedI32::<U15>::from(self.velocity))
-            .saturating_to_fixed::<I1F15>();
-
-        out_sample
+            .saturating_to_fixed::<I1F15>()
     }
 
     fn run_command(&mut self, command: Command) {

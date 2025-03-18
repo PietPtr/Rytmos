@@ -19,6 +19,9 @@ pub struct DrumSynth {
 pub const KICK_NOTE: Note = Note::C(Accidental::Natural, 2);
 pub const SNARE_NOTE: Note = Note::D(Accidental::Natural, 2);
 pub const HIHAT_NOTE: Note = Note::F(Accidental::Sharp, 2);
+// TODO: add these to the drum synth
+pub const STICKS_NOTE: Note = Note::C(Accidental::Sharp, 2); // TODO: verify
+pub const CYMBAL_NOTE: Note = Note::C(Accidental::Sharp, 3);
 
 pub struct DrumSynthSettings {}
 

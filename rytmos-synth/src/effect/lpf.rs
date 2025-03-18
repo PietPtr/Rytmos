@@ -1,5 +1,3 @@
-use core::u32;
-
 use derivative::Derivative;
 use fixed::types::{I1F15, U4F4};
 use rytmos_engrave::staff::Note;

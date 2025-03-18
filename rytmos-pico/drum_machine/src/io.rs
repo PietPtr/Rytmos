@@ -2,8 +2,7 @@ use drum_machine_bsp::{
     hal::{
         adc::AdcPin,
         gpio::{
-            DynFunction, DynPinId, FunctionNull, FunctionSio, FunctionSioInput, FunctionSioOutput,
-            Pin, PullDown, PullNone, SioOutput,
+            DynFunction, DynPinId, FunctionSioInput, FunctionSioOutput, Pin, PullDown, PullNone,
         },
         Adc,
     },
