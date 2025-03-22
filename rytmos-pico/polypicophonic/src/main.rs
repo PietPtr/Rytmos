@@ -9,6 +9,7 @@ pub static BOOT2_FIRMWARE: [u8; 256] = rp2040_boot2::BOOT_LOADER_W25Q080;
 use core::cell::RefCell;
 
 use cortex_m::{interrupt::Mutex, singleton};
+#[allow(unused_imports)]
 use defmt::{error, info, warn};
 use defmt_rtt as _;
 use embedded_hal::digital::v2::InputPin;
@@ -39,6 +40,7 @@ use rp_pico::{
 
 use common::consts::*;
 use common::debouncer::Debouncer;
+use rytmos_engrave::staff::Note;
 use rytmos_engrave::{a, ais, b, c, cis, d, dis, e, f, fis, g, gis};
 use rytmos_synth::commands::CommandMessage;
 use rytmos_synth::effect::linear_decay::LinearDecay;
@@ -142,10 +144,7 @@ fn synth_core(sys_freq: u32) -> ! {
         sio.fifo
             .read()
             .and_then(Command::deserialize)
-            .inspect(|&command| {
-                // info!("{:?}", command);
-                synth.run_command(command)
-            });
+            .inspect(|&command| synth.run_command(command));
 
         if !warned && i2s_tx_transfer.is_done() {
             warn!("i2s transfer already done, probably late.");
@@ -367,6 +366,22 @@ fn main() -> ! {
             let _ = messages.push(CommandMessage::Play(b!(octave), U4F4::from_num(0)));
         }
 
+        // ---- chords
+
+        const CONSTRUCTION: ChordConstruction = ChordConstruction::InvertToWithinOctave;
+
+        if let Ok(true) = fn1_debouncer.is_high() {
+            add_chord(&mut messages, ChordQuality::Major, CONSTRUCTION);
+            root_to_bass_register(&mut messages);
+        }
+
+        if let Ok(true) = fn1_debouncer.is_high() {
+            add_chord(&mut messages, ChordQuality::Minor, CONSTRUCTION);
+            root_to_bass_register(&mut messages);
+        }
+
+        // ----
+
         for message in messages {
             let command = Command {
                 address: 0x0,
@@ -393,6 +408,81 @@ fn main() -> ! {
     }
 }
 
+enum ChordQuality {
+    Major,
+    Minor,
+}
+
+#[allow(dead_code)]
+enum ChordConstruction {
+    DiatonicUp,
+    InvertToWithinOctave,
+}
+
+fn root_to_bass_register(messages: &mut Vec<CommandMessage, 4>) {
+    let Some(root_message) = messages.first_mut() else {
+        return;
+    };
+
+    let CommandMessage::Play(root, _) = root_message else {
+        return;
+    };
+
+    root.map_octave(|_| 2);
+}
+
+fn add_chord(
+    messages: &mut Vec<CommandMessage, 4>,
+    quality: ChordQuality,
+    construction: ChordConstruction,
+) {
+    let (root, velocity) = {
+        let Some(root_message) = messages.first() else {
+            return;
+        };
+
+        let CommandMessage::Play(root, velocity) = root_message else {
+            return;
+        };
+
+        (*root, *velocity)
+    };
+
+    let (third, fifth) = match construction {
+        ChordConstruction::DiatonicUp => diatonic_up(root, quality),
+        ChordConstruction::InvertToWithinOctave => invert_to_within_octave(root, quality),
+    };
+
+    let _ = messages.push(CommandMessage::Play(third, velocity));
+    let _ = messages.push(CommandMessage::Play(fifth, velocity));
+}
+
+fn diatonic_up(root: Note, quality: ChordQuality) -> (Note, Note) {
+    let third = match quality {
+        ChordQuality::Major => Note::from_u8_flat(root.to_midi_code() + 4),
+        ChordQuality::Minor => Note::from_u8_flat(root.to_midi_code() + 3),
+    };
+
+    let fifth = Note::from_u8_flat(root.to_midi_code() + 7);
+
+    (third, fifth)
+}
+
+fn invert_to_within_octave(root: Note, quality: ChordQuality) -> (Note, Note) {
+    let (mut third, mut fifth) = diatonic_up(root, quality);
+
+    if third.octave() > root.octave() {
+        third.map_octave(|o| o - 1);
+        fifth.map_octave(|o| o - 1);
+    }
+
+    if fifth.octave() > root.octave() {
+        fifth.map_octave(|o| o - 1);
+    }
+
+    (third, fifth)
+}
+
 const NOTE_C: usize = 0;
 const NOTE_CIS: usize = 1;
 const NOTE_D: usize = 2;
@@ -405,7 +495,7 @@ const NOTE_GIS: usize = 8;
 const NOTE_A: usize = 9;
 const NOTE_AIS: usize = 10;
 const NOTE_B: usize = 11;
-const FN_0: usize = 12;
-const FN_1: usize = 13;
-const FN_2: usize = 14;
-const FN_3: usize = 15;
+// const FN_0: usize = 12;
+// const FN_1: usize = 13;
+// const FN_2: usize = 14;
+// const FN_3: usize = 15;

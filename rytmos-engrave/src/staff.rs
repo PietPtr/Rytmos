@@ -1001,6 +1001,18 @@ impl Note {
         }
     }
 
+    pub fn octave(&self) -> i32 {
+        match self {
+            Note::A(_, octave) => *octave,
+            Note::B(_, octave) => *octave,
+            Note::C(_, octave) => *octave,
+            Note::D(_, octave) => *octave,
+            Note::E(_, octave) => *octave,
+            Note::F(_, octave) => *octave,
+            Note::G(_, octave) => *octave,
+        }
+    }
+
     pub fn map_octave(&mut self, f: impl Fn(i32) -> i32) -> Self {
         match self {
             Note::A(acc, octave) => Note::A(*acc, f(*octave)),
