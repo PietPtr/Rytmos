@@ -10,7 +10,7 @@ description = "Basic synthesizer for rytmos types"
 fixed = "1.27.0"
 libm = "0.2.8"
 log = "0.4.22"
-defmt = "0.3.5"
+defmt = { version = "0.3.5", optional = true }
 rytmos-engrave = { path = "../rytmos-engrave" }
 derivative = { version = "2.2.0", features = ["use_core"] }
 heapless = "0.7.16"
@@ -19,4 +19,9 @@ heapless = "0.7.16"
 env_logger = "0.11.3"
 hound = "3.5.1"
 plotters = "0.3.6"
+defmt-rtt = "1.0.0"
+cortex-m-rt = "0.7.5"
 rand = "0.8.5"
+
+[features]
+defmt = ["dep:defmt"]

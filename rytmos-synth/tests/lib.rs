@@ -1,4 +1,4 @@
-use std::{fs::File, sync::Once};
+use std::sync::Once;
 
 use fixed::{
     types::{extra::U15, I1F15, U14F2, U4F4},
@@ -6,6 +6,7 @@ use fixed::{
 };
 use plotters::prelude::*;
 use rand::Rng;
+
 use rytmos_engrave::*;
 use rytmos_synth::{
     commands::Command,
@@ -23,7 +24,6 @@ use rytmos_synth::{
         },
         drum::{self, DrumSynth, DrumSynthSettings},
         metronome::MetronomeSynth,
-        samples::weak::WEAK_WAV_44100,
         sawtooth::{SawtoothSynth, SawtoothSynthSettings},
         sine::{SineSynth, SineSynthSettings},
         vibrato::{VibratoSynth, VibratoSynthSettings},
@@ -86,7 +86,7 @@ fn calculate_errors(true_values: &[i16], approx_values: &[i16]) -> (f64, f64) {
 
     for (&true_val, &approx_val) in true_values.iter().zip(approx_values.iter()) {
         let error = (true_val as i32 - approx_val as i32) as f64;
-        mae += error.abs() as f64;
+        mae += error.abs();
         mse += error * error;
     }
 
@@ -592,43 +592,6 @@ fn print_frequency_bit_consts() {
 }
 
 #[test]
-fn convert_i16_table_to_i1f15() {
-    dbg!(I1F15::MIN, I1F15::MAX, I1F15::from_bits(1));
-    // for sample in rytmos_synth::synth::samples::weak::WEAK_WAV {
-    //     let converted = I1F15::from_num(sample as f32 / i16::MAX as f32);
-    //     println!("I1F15::from_bits({:#018b}),", converted.to_bits());
-    // }
-}
-
-#[test]
-fn resample_and_print() {
-    let input_rate = 44100;
-    let output_rate = 24000;
-    let data = WEAK_WAV_44100;
-    let ratio = input_rate as f32 / output_rate as f32;
-    let output_len = ((data.len() as f32) / ratio).ceil() as usize;
-
-    for i in 0..output_len {
-        let input_pos = i as f32 * ratio;
-        let idx = input_pos as usize;
-        let frac = input_pos - idx as f32;
-
-        let interpolated = if idx + 1 < data.len() {
-            let left: f32 = data[idx].to_num();
-            let right: f32 = data[idx + 1].to_num();
-            I1F15::from_num(left + (right - left) * frac)
-        } else {
-            data[idx]
-        };
-
-        println!(
-            "I1F15::from_bits({:#018b}u16 as i16),",
-            interpolated.to_bits()
-        );
-    }
-}
-
-#[test]
 fn test_drum_synth() {
     init_logger();
 
@@ -647,6 +610,16 @@ fn test_drum_synth() {
             );
         };
     }
+
+    synth.play(drum::STRONG_NOTE, V1);
+    delay!();
+    synth.play(drum::WEAK_NOTE, V1);
+    delay!();
+    synth.play(drum::WEAK_NOTE, V1);
+    delay!();
+    synth.play(drum::WEAK_NOTE, V1);
+    delay!();
+    synth.play(drum::CYMBAL_NOTE, V1);
 
     for _ in 0..4 {
         synth.play(drum::KICK_NOTE, V1);
@@ -671,36 +644,6 @@ fn test_drum_synth() {
         delay!();
     }
 
-    plot_samples(&samples[..70000]).unwrap();
+    plot_samples(&samples[..40000]).unwrap();
     export_to_wav(samples, "signal.wav");
-}
-
-// TODO: split up this file into hacks for constants and synth tests and helpers.
-
-#[test]
-fn wav2consts() {
-    use std::io::Write;
-
-    let path = "/tmp/kick.wav".to_string();
-    let mut file = File::create(path.clone() + ".rs").unwrap();
-
-    let mut reader = hound::WavReader::open(path).expect("Failed to open WAV file");
-
-    let sample_len = reader.samples::<i16>().len();
-    for sample in reader.samples::<i16>() {
-        match sample {
-            Ok(value) => {
-                let converted = I1F15::wrapping_from_num(value as f32 / i16::MAX as f32);
-                writeln!(
-                    file,
-                    "I1F15::from_bits({:#018b}u16 as i16),",
-                    converted.to_bits()
-                )
-                .unwrap();
-            }
-            Err(e) => eprintln!("Error reading sample: {}", e),
-        }
-    }
-
-    println!("sample_len={sample_len}");
 }

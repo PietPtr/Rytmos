@@ -22,9 +22,9 @@ drum-machine-bsp = { path = "../../bsps/drum_machine", default-features = false,
 fugit = "0.3.7"
 pio = "0.2.1"
 pio-proc = "0.2.2"
-heapless = "0.7.16"
 rp2040-boot2 = "0.2.1"
+heapless = "0.7.16"
 libm = "0.2.8"
 micromath = "2.1.0"
-rytmos-synth = { path = "../../rytmos-synth" }
-common = { path = "../common" }
+rytmos-synth = { path = "../../rytmos-synth", features = ["defmt"] }
+common = { path = "../common", features = ["rp-pico"] }

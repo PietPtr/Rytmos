@@ -2,18 +2,19 @@ use drum_machine_bsp::{
     hal::{
         adc::AdcPin,
         gpio::{
-            DynFunction, DynPinId, FunctionSioInput, FunctionSioOutput, Pin, PullDown, PullNone,
+            self, DynFunction, DynPinId, FunctionSioInput, FunctionSioOutput, Pin, PullDown,
+            PullNone,
         },
         Adc,
     },
     Pins,
 };
-use embedded_hal::digital::v2::OutputPin;
+use embedded_hal::digital::v2::{OutputPin, ToggleableOutputPin};
 use embedded_hal::{adc::OneShot, digital::v2::InputPin};
 
 use crate::cd4051::Cd4051Addressor;
 
-#[derive(Debug, Default, Clone, Copy)]
+#[derive(Debug, Default, Clone, Copy, defmt::Format)]
 pub struct BoardSettings {
     pub play_or_pause: bool,
     pub countoff_at_play: bool,
@@ -28,27 +29,27 @@ pub struct BoardSettings {
 impl From<[bool; 8]> for BoardSettings {
     fn from(value: [bool; 8]) -> Self {
         Self {
-            play_or_pause: value[0],
-            countoff_at_play: value[1],
-            leds_enabled: value[2],
-            time_signature: value[3],
-            cymbal_every_four_measures: value[4],
-            reserved0: value[5],
-            reserved1: value[6],
-            reserved2: value[7],
+            play_or_pause: value[3],
+            countoff_at_play: value[2],
+            leds_enabled: value[1],
+            time_signature: value[0],
+            cymbal_every_four_measures: value[7],
+            reserved0: value[6],
+            reserved1: value[5],
+            reserved2: value[4],
         }
     }
 }
 
-#[derive(Debug, Default, Clone, Copy)]
+#[derive(Debug, Default, Clone, Copy, defmt::Format)]
 pub struct DrumIOState {
     pub hat: [bool; 16],
     pub snare: [bool; 16],
     pub kick: [bool; 16],
     pub active_led: Option<u8>,
     pub volume: [u16; 3],
-    pub filter: [u16; 3],
     pub expr: [u16; 3],
+    pub filter: [u16; 3],
     pub bpm: u16,
     pub settings: BoardSettings,
 }
@@ -63,10 +64,17 @@ pub struct DrumIO {
     pot_readers: [AdcPin<Pin<DynPinId, DynFunction, PullDown>>; 2],
     perc_bus_read_pins: [Pin<DynPinId, FunctionSioInput, PullNone>; 7],
     adc: Adc,
+    led_pin: Pin<DynPinId, FunctionSioOutput, PullNone>,
 }
 
 impl DrumIO {
     pub fn new(pins: Pins, adc: Adc) -> Self {
+        let led_pin = pins
+            .led
+            .into_push_pull_output_in_state(gpio::PinState::High)
+            .reconfigure()
+            .into_dyn_pin();
+
         let perc_addr = Cd4051Addressor {
             addr0: pins.perc_addr0.reconfigure().into_dyn_pin(),
             addr1: pins.perc_addr1.reconfigure().into_dyn_pin(),
@@ -114,6 +122,7 @@ impl DrumIO {
             perc_bus_read_pins,
             adc,
             state: DrumIOState::default(),
+            led_pin,
         }
     }
 
@@ -127,6 +136,8 @@ impl DrumIO {
 
     /// Commits the current state to the outputs, reads the on-board state of the inputs
     pub fn update(&mut self) -> DrumIOState {
+        self.led_pin.toggle().unwrap();
+
         // Update which LED is on
         if let Some(led_id) = self.state.active_led {
             let led_id = led_id & 0b1111;
@@ -139,6 +150,9 @@ impl DrumIO {
             }
 
             self.led_addr.set(led_id & 0b111);
+        } else {
+            self.led_drivers[0].set_low().unwrap();
+            self.led_drivers[1].set_low().unwrap();
         }
 
         // Read the potentiometers
@@ -150,8 +164,8 @@ impl DrumIO {
             let read0: u16 = self.adc.read(&mut self.pot_readers[0]).unwrap();
             let read1: u16 = self.adc.read(&mut self.pot_readers[1]).unwrap();
 
-            pot_values[addr as usize * 2] = read0;
-            pot_values[addr as usize * 2 + 1] = read1;
+            pot_values[addr as usize] = read0;
+            pot_values[8 + addr as usize] = read1;
         }
 
         // Read the settings and the percussion configuration
@@ -176,10 +190,10 @@ impl DrumIO {
         }
 
         // Update the io state struct with the raw values
-        self.state.filter.copy_from_slice(&pot_values[0..3]);
-        self.state.volume.copy_from_slice(&pot_values[3..6]);
+        self.state.volume.copy_from_slice(&pot_values[0..3]);
         self.state.expr.copy_from_slice(&pot_values[3..6]);
-        self.state.bpm = pot_values[10];
+        self.state.filter.copy_from_slice(&pot_values[6..9]);
+        self.state.bpm = 4095 - pot_values[9];
         self.state.hat = hat_values;
         self.state.snare = snare_values;
         self.state.kick = kick_values;

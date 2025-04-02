@@ -20,6 +20,7 @@ pub struct Command {
     pub message: CommandMessage,
 }
 
+#[cfg(feature = "defmt")]
 impl defmt::Format for Command {
     fn format(&self, fmt: defmt::Formatter) {
         defmt::write!(fmt, "Command {{ address: {}, message: ", self.address);

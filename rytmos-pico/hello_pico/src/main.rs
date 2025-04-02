@@ -79,9 +79,10 @@ fn main() -> ! {
     info!("{:x}\n{:x}", points, after_reset);
 
     loop {
+        info!("update");
         led_pin.set_high().unwrap();
         delay.delay_ms(1000);
         led_pin.set_low().unwrap();
-        delay.delay_ms(1000);
+        delay.delay_ms(100);
     }
 }

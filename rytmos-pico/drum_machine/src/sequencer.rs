@@ -5,6 +5,8 @@ use rytmos_synth::{
     synth::drum,
 };
 
+use crate::io::DrumIOState;
+
 #[derive(Debug, Default)]
 pub struct SingleSampleSequence {
     pub subdivs: [bool; 16],
@@ -23,11 +25,13 @@ pub struct Sequencer {
     sequence: Sequence,
     subdivision_index: u8,
     state: SequencerState,
+    volumes: [U4F4; 3],
+    // expression:
     pub time_signature: SequenceTimeSignature,
     pub cymbal_every_four_measures: bool,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, defmt::Format)]
 enum SequencerState {
     #[default]
     Stopped,
@@ -37,8 +41,12 @@ enum SequencerState {
 }
 
 impl Sequencer {
-    pub fn new() -> Self {
-        Self::default()
+    pub fn new(io_state: DrumIOState) -> Self {
+        Self {
+            time_signature: io_state.settings.cymbal_every_four_measures.into(),
+            cymbal_every_four_measures: io_state.settings.cymbal_every_four_measures,
+            ..Self::default()
+        }
     }
 
     pub fn change_sequence(&mut self, sequence: Sequence) {
@@ -46,27 +54,62 @@ impl Sequencer {
     }
 
     pub fn current_subdivision(&self) -> u8 {
-        self.subdivision_index
+        match self.state {
+            SequencerState::Stopped => 0,
+            SequencerState::CountOffSlow => self.subdivision_index & 0b1000,
+            SequencerState::CountOffFast => self.subdivision_index & 0b1100,
+            SequencerState::Playing(_) => self.subdivision_index,
+        }
     }
 
     pub fn stop(&mut self) {
-        self.state = SequencerState::Stopped;
+        match self.state {
+            SequencerState::Stopped => {}
+            SequencerState::CountOffSlow => {
+                self.state = SequencerState::Stopped;
+            }
+            SequencerState::CountOffFast => {
+                self.state = SequencerState::Stopped;
+            }
+            SequencerState::Playing(_) => {
+                self.state = SequencerState::Stopped;
+            }
+        }
     }
 
     pub fn play(&mut self) {
-        self.subdivision_index = 0;
-        self.state = SequencerState::Playing(0);
+        match self.state {
+            SequencerState::Stopped => {
+                self.subdivision_index = 0;
+                self.state = SequencerState::Playing(0);
+            }
+            SequencerState::CountOffSlow => {}
+            SequencerState::CountOffFast => {}
+            SequencerState::Playing(_) => {}
+        }
     }
 
     pub fn play_with_countoff(&mut self) {
-        self.state = SequencerState::CountOffSlow;
+        match self.state {
+            SequencerState::Stopped => {
+                self.subdivision_index = 0;
+                self.state = SequencerState::CountOffSlow;
+            }
+            SequencerState::CountOffSlow => {}
+            SequencerState::CountOffFast => {}
+            SequencerState::Playing(_) => {}
+        }
+    }
+
+    pub fn is_playing(&self) -> bool {
+        !matches!(self.state, SequencerState::Stopped)
     }
 
     pub fn next_subdivision(&mut self) -> Vec<Command, 4> {
         let subdiv = self.subdivision_index as usize;
         let next_subdiv = self.subdivision_index + 1;
 
-        self.subdivision_index = if next_subdiv > self.time_signature.amount_of_subdivisions() {
+        self.subdivision_index = if next_subdiv >= self.time_signature.amount_of_subdivisions() {
             0
         } else {
             next_subdiv
@@ -75,7 +118,10 @@ impl Sequencer {
         match self.state {
             SequencerState::Stopped => Vec::new(),
             SequencerState::CountOffSlow => {
-                self.state = SequencerState::CountOffFast;
+                if self.subdivision_index == 0 {
+                    self.state = SequencerState::CountOffFast;
+                }
+
                 let (one, two) = match self.time_signature {
                     SequenceTimeSignature::FourFour => (0, 8),
                     SequenceTimeSignature::TwelveEight => (0, 6),
@@ -85,7 +131,7 @@ impl Sequencer {
                     let mut vec = Vec::new();
                     vec.push(Command {
                         address: 0,
-                        message: CommandMessage::Play(drum::STICKS_NOTE, U4F4::ONE),
+                        message: CommandMessage::Play(drum::WEAK_NOTE, U4F4::ONE),
                     })
                     .unwrap();
 
@@ -95,7 +141,9 @@ impl Sequencer {
                 }
             }
             SequencerState::CountOffFast => {
-                self.state = SequencerState::Playing(0);
+                if self.subdivision_index == 0 {
+                    self.state = SequencerState::Playing(0);
+                }
 
                 let (one, two, three, four) = match self.time_signature {
                     SequenceTimeSignature::FourFour => (0, 4, 8, 12),
@@ -106,7 +154,7 @@ impl Sequencer {
                     let mut vec = Vec::new();
                     vec.push(Command {
                         address: 0,
-                        message: CommandMessage::Play(drum::STICKS_NOTE, U4F4::ONE),
+                        message: CommandMessage::Play(drum::WEAK_NOTE, U4F4::ONE),
                     })
                     .unwrap();
 
@@ -116,7 +164,9 @@ impl Sequencer {
                 }
             }
             SequencerState::Playing(measure) => {
-                self.state = SequencerState::Playing((measure + 1) & 0b11);
+                if self.subdivision_index == 0 {
+                    self.state = SequencerState::Playing((measure + 1) & 0b11);
+                }
 
                 let has_hat = self
                     .sequence
@@ -195,6 +245,15 @@ impl SequenceTimeSignature {
         match self {
             SequenceTimeSignature::FourFour => 16,
             SequenceTimeSignature::TwelveEight => 12,
+        }
+    }
+}
+
+impl From<bool> for SequenceTimeSignature {
+    fn from(value: bool) -> Self {
+        match value {
+            true => SequenceTimeSignature::FourFour,
+            false => SequenceTimeSignature::TwelveEight,
         }
     }
 }

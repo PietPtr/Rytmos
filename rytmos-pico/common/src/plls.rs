@@ -1,5 +1,7 @@
+#![cfg(feature = "rp-pico")]
+
 use fugit::HertzU32;
-use rp_pico::hal::pll::PLLConfig;
+use rp2040_hal::pll::PLLConfig;
 
 #[allow(dead_code)]
 pub const SYS_PLL_CONFIG_76P8MHZ: PLLConfig = PLLConfig {

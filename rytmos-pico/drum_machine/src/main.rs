@@ -6,9 +6,7 @@
 #[used]
 pub static BOOT2_FIRMWARE: [u8; 256] = rp2040_boot2::BOOT_LOADER_W25Q080;
 
-use core::cell::RefCell;
-
-use cortex_m::{interrupt::Mutex, singleton};
+use cortex_m::{asm, singleton};
 #[allow(unused_imports)]
 use defmt::{error, info, warn};
 use defmt_rtt as _;
@@ -19,36 +17,217 @@ use drum_machine::{
 use drum_machine_bsp::{
     entry,
     hal::{
-        clocks::{Clock, ClockSource, ClocksManager, InitError},
+        clocks::{Clock, ClockSource, ClocksManager},
         dma::{double_buffer, DMAExt},
         gpio::{self, FunctionPio0},
         multicore::{Multicore, Stack},
         pio::{Buffers, PIOBuilder, PIOExt, PinDir, ShiftDirection},
         pll::{common_configs::PLL_USB_48MHZ, setup_pll_blocking, PLLConfig},
-        sio::{Sio, SioFifo},
-        timer::{Alarm, Alarm1},
+        sio::Sio,
         watchdog::Watchdog,
         xosc::setup_xosc_blocking,
         Adc, Timer,
     },
-    pac,
+    pac, Pins,
 };
 use fixed::types::U4F4;
-use fugit::Duration;
 use fugit::HertzU32;
 use panic_probe as _;
-use rytmos_synth::commands::Command;
 
 use common::consts::*;
+use rytmos_synth::commands::Command;
 use rytmos_synth::synth::drum::DrumSynth;
 use rytmos_synth::synth::drum::DrumSynthSettings;
 use rytmos_synth::synth::Synth;
 
+#[allow(dead_code)]
+pub const SYS_PLL_CONFIG_307P2MHZ: PLLConfig = PLLConfig {
+    vco_freq: HertzU32::MHz(1536),
+    refdiv: 1,
+    post_div1: 5,
+    post_div2: 2,
+};
+
+#[entry]
+fn main() -> ! {
+    let mut pac = pac::Peripherals::take().unwrap();
+    let core = pac::CorePeripherals::take().unwrap();
+    let mut sio = Sio::new(pac.SIO);
+
+    let mut watchdog = Watchdog::new(pac.WATCHDOG);
+
+    // let clocks = clocks::init_clocks_and_plls(
+    //     12_000_000u32,
+    //     pac.XOSC,
+    //     pac.CLOCKS,
+    //     pac.PLL_SYS,
+    //     pac.PLL_USB,
+    //     &mut pac.RESETS,
+    //     &mut watchdog,
+    // )
+    // .unwrap();
+
+    let mut clocks = ClocksManager::new(pac.CLOCKS);
+
+    let xosc = setup_xosc_blocking(pac.XOSC, EXTERNAL_XTAL_FREQ_HZ).unwrap();
+
+    watchdog.enable_tick_generation((12_000_000u32 / 1_000_000) as u8);
+
+    {
+        let pll_sys = setup_pll_blocking(
+            pac.PLL_SYS,
+            xosc.operating_frequency(),
+            SYS_PLL_CONFIG_307P2MHZ,
+            &mut clocks,
+            &mut pac.RESETS,
+        )
+        .unwrap();
+
+        let pll_usb = setup_pll_blocking(
+            pac.PLL_USB,
+            xosc.operating_frequency(),
+            PLL_USB_48MHZ,
+            &mut clocks,
+            &mut pac.RESETS,
+        )
+        .unwrap();
+
+        clocks
+            .reference_clock
+            .configure_clock(&xosc, xosc.get_freq())
+            .unwrap();
+
+        clocks
+            .system_clock
+            .configure_clock(&pll_sys, pll_sys.get_freq())
+            .unwrap();
+
+        clocks
+            .usb_clock
+            .configure_clock(&pll_usb, pll_usb.get_freq())
+            .unwrap();
+
+        clocks
+            .adc_clock
+            .configure_clock(&pll_usb, pll_usb.get_freq())
+            .unwrap();
+
+        clocks
+            .rtc_clock
+            .configure_clock(&pll_usb, HertzU32::from_raw(46875u32))
+            .unwrap();
+
+        clocks
+            .peripheral_clock
+            .configure_clock(&clocks.system_clock, clocks.system_clock.freq())
+            .unwrap();
+    }
+
+    let mut _delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().to_Hz());
+    let timer = Timer::new(pac.TIMER, &mut pac.RESETS, &clocks);
+
+    let pins = Pins::new(
+        pac.IO_BANK0,
+        pac.PADS_BANK0,
+        sio.gpio_bank0,
+        &mut pac.RESETS,
+    );
+
+    info!("Initializing other core.");
+    let sys_freq = clocks.system_clock.freq().to_Hz();
+    let mut mc = Multicore::new(&mut pac.PSM, &mut pac.PPB, &mut sio.fifo);
+    let cores = mc.cores();
+    let core1 = &mut cores[1];
+    let _ = core1.spawn(unsafe { CORE1_STACK.take().unwrap() }, move || {
+        synth_core(sys_freq)
+    });
+
+    info!("initializing I/O");
+
+    let mut io = DrumIO::new(pins, Adc::new(pac.ADC, &mut pac.RESETS));
+
+    info!("I/O initialized :)");
+
+    let mut sequencer = Sequencer::new(io.update());
+
+    loop {
+        let start = timer.get_counter();
+        let io_state = io.update();
+
+        sequencer.change_sequence(Sequence {
+            hat: sequencer::SingleSampleSequence {
+                subdivs: io_state.hat,
+                velocity: U4F4::from_bits((io_state.volume[0] >> 8) as u8),
+            },
+            snare: sequencer::SingleSampleSequence {
+                subdivs: io_state.snare,
+                velocity: U4F4::from_bits((io_state.volume[1] >> 8) as u8),
+            },
+            kick: sequencer::SingleSampleSequence {
+                subdivs: io_state.kick,
+                velocity: U4F4::from_bits((io_state.volume[2] >> 8) as u8),
+            },
+        });
+
+        if !io_state.settings.leds_enabled || !sequencer.is_playing() {
+            io.disable_led();
+        } else {
+            io.led_index(sequencer.current_subdivision());
+        }
+
+        if io_state.settings.play_or_pause {
+            if io_state.settings.countoff_at_play {
+                sequencer.play_with_countoff();
+            } else {
+                sequencer.play()
+            }
+        } else {
+            sequencer.stop();
+            io.disable_led();
+        }
+
+        sequencer.cymbal_every_four_measures = io_state.settings.cymbal_every_four_measures;
+        sequencer.time_signature = if io_state.settings.time_signature {
+            SequenceTimeSignature::FourFour
+        } else {
+            SequenceTimeSignature::TwelveEight
+        };
+
+        const MIN_BEATS_PER_KILOMINUTE: u32 = 10_000; // = 10 BPM
+        const MAX_BEATS_PER_KILOMINUTE: u32 = 200_000;
+        const BEATS_PER_KLIOMINUTE_MULTIPLIER: u32 =
+            (MAX_BEATS_PER_KILOMINUTE - MIN_BEATS_PER_KILOMINUTE) / 4096;
+
+        let bpkm = MIN_BEATS_PER_KILOMINUTE + io_state.bpm as u32 * BEATS_PER_KLIOMINUTE_MULTIPLIER;
+        let microseconds_per_beat = 60_000_000_000u64 / bpkm as u64;
+        let microseconds_per_interval = match sequencer.time_signature {
+            SequenceTimeSignature::FourFour => microseconds_per_beat / 4,
+            SequenceTimeSignature::TwelveEight => microseconds_per_beat / 3,
+        };
+
+        loop {
+            let end = timer.get_counter();
+            let time_taken_us = (end - start).to_micros();
+
+            if time_taken_us > microseconds_per_interval {
+                break;
+            }
+        }
+
+        let _subdiv = sequencer.current_subdivision();
+        let commands = sequencer.next_subdivision();
+        for command in commands {
+            sio.fifo.write(command.serialize());
+            // info!("{} | command={}", _subdiv, command);
+        }
+    }
+}
+
 static mut CORE1_STACK: Stack<4096> = Stack::new();
 
-fn synth_core(sys_freq: u32) -> ! {
+fn synth_core(_sys_freq: u32) -> ! {
     let mut pac = unsafe { pac::Peripherals::steal() };
-    let core = unsafe { pac::CorePeripherals::steal() };
+    let _core = unsafe { pac::CorePeripherals::steal() };
     let mut sio = Sio::new(pac.SIO);
     let pins = gpio::Pins::new(
         pac.IO_BANK0,
@@ -56,7 +235,6 @@ fn synth_core(sys_freq: u32) -> ! {
         sio.gpio_bank0,
         &mut pac.RESETS,
     );
-    let mut delay = cortex_m::delay::Delay::new(core.SYST, sys_freq);
 
     let i2s_sck_pin = pins.gpio12.into_function::<FunctionPio0>();
     let i2s_din_pin = pins.gpio13.into_function::<FunctionPio0>();
@@ -101,7 +279,9 @@ fn synth_core(sys_freq: u32) -> ! {
     let i2s_tx_transfer = i2s_dma_config.start();
     let mut i2s_tx_transfer = i2s_tx_transfer.read_next(i2s_tx_buf2);
 
-    delay.delay_ms(100);
+    for _ in 0..1000 {
+        asm::nop();
+    }
 
     info!("Start Synth core.");
 
@@ -111,10 +291,7 @@ fn synth_core(sys_freq: u32) -> ! {
         sio.fifo
             .read()
             .and_then(Command::deserialize)
-            .inspect(|&command| {
-                info!("{:?}", command);
-                synth.run_command(command)
-            });
+            .inspect(|&command| synth.run_command(command));
 
         let mut sample = 0;
         let (next_tx_buf, next_tx_transfer) = i2s_tx_transfer.wait();
@@ -129,142 +306,5 @@ fn synth_core(sys_freq: u32) -> ! {
         }
 
         i2s_tx_transfer = next_tx_transfer.read_next(next_tx_buf);
-    }
-}
-
-static FIFO: Mutex<RefCell<Option<SioFifo>>> = Mutex::new(RefCell::new(None));
-static ALARM: Mutex<RefCell<Option<Alarm1>>> = Mutex::new(RefCell::new(None));
-
-#[allow(dead_code)]
-pub const SYS_PLL_CONFIG_307P2MHZ: PLLConfig = PLLConfig {
-    vco_freq: HertzU32::MHz(1536),
-    refdiv: 1,
-    post_div1: 5,
-    post_div2: 1,
-};
-
-#[entry]
-fn main() -> ! {
-    let mut pac = pac::Peripherals::take().unwrap();
-    let core = pac::CorePeripherals::take().unwrap();
-    let mut watchdog = Watchdog::new(pac.WATCHDOG);
-    let mut sio = Sio::new(pac.SIO);
-
-    watchdog.enable_tick_generation((EXTERNAL_XTAL_FREQ_HZ.raw() / 1_000_000) as u8);
-
-    let mut clocks = ClocksManager::new(pac.CLOCKS);
-
-    common::setup_clocks!(pac, clocks, SYS_PLL_CONFIG_307P2MHZ);
-
-    let mut _delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().to_Hz());
-
-    let pins = drum_machine_bsp::Pins::new(
-        pac.IO_BANK0,
-        pac.PADS_BANK0,
-        sio.gpio_bank0,
-        &mut pac.RESETS,
-    );
-
-    // Setup the other core
-    let sys_freq = clocks.system_clock.freq().to_Hz();
-    let mut mc = Multicore::new(&mut pac.PSM, &mut pac.PPB, &mut sio.fifo);
-    let cores = mc.cores();
-    let core1 = &mut cores[1];
-    let _test = core1.spawn(unsafe { CORE1_STACK.take().unwrap() }, move || {
-        synth_core(sys_freq)
-    });
-
-    let mut timer = Timer::new(pac.TIMER, &mut pac.RESETS, &clocks);
-    let mut alarm = timer.alarm_1().unwrap();
-
-    cortex_m::interrupt::free(move |cs| {
-        FIFO.borrow(cs).replace(Some(sio.fifo));
-
-        alarm
-            .schedule(Duration::<u32, 1, 1000000>::millis(1))
-            .unwrap();
-        alarm.enable_interrupt();
-
-        ALARM.borrow(cs).replace(Some(alarm));
-    });
-
-    info!("Start I/O thread.");
-
-    let mut io = DrumIO::new(pins, Adc::new(pac.ADC, &mut pac.RESETS));
-    let mut sequencer = Sequencer::new();
-
-    let mut last_io_state = io.update();
-
-    loop {
-        let start = timer.get_counter();
-        let io_state = io.update();
-
-        sequencer.change_sequence(Sequence {
-            hat: sequencer::SingleSampleSequence {
-                subdivs: io_state.hat,
-                velocity: U4F4::from_bits((io_state.volume[0] >> 8) as u8),
-            },
-            snare: sequencer::SingleSampleSequence {
-                subdivs: io_state.snare,
-                velocity: U4F4::from_bits((io_state.volume[1] >> 8) as u8),
-            },
-            kick: sequencer::SingleSampleSequence {
-                subdivs: io_state.kick,
-                velocity: U4F4::from_bits((io_state.volume[2] >> 8) as u8),
-            },
-        });
-
-        sequencer.next_subdivision();
-
-        if !io_state.settings.leds_enabled {
-            io.disable_led();
-        } else {
-            io.led_index(sequencer.current_subdivision());
-        }
-
-        match (
-            last_io_state.settings.play_or_pause,
-            io_state.settings.play_or_pause,
-        ) {
-            (true, false) => sequencer.stop(),
-            (false, true) => {
-                if io_state.settings.countoff_at_play {
-                    sequencer.play_with_countoff();
-                } else {
-                    sequencer.play()
-                }
-            }
-            _ => {}
-        }
-
-        sequencer.cymbal_every_four_measures = io_state.settings.cymbal_every_four_measures;
-        sequencer.time_signature = if io_state.settings.time_signature {
-            SequenceTimeSignature::FourFour
-        } else {
-            SequenceTimeSignature::TwelveEight
-        };
-
-        const MIN_BEATS_PER_KILOMINUTE: u32 = 10_000; // = 10 BPM
-        const MAX_BEATS_PER_KILOMINUTE: u32 = 240_000;
-        const BEATS_PER_KLIOMINUTE_MULTIPLIER: u32 =
-            (MAX_BEATS_PER_KILOMINUTE - MIN_BEATS_PER_KILOMINUTE) / 4096;
-
-        let bpkm = MIN_BEATS_PER_KILOMINUTE + io_state.bpm as u32 * BEATS_PER_KLIOMINUTE_MULTIPLIER;
-        let microseconds_per_beat = 60_000_000_000u64 / bpkm as u64;
-        let microseconds_per_interval = match sequencer.time_signature {
-            SequenceTimeSignature::FourFour => microseconds_per_beat / 4,
-            SequenceTimeSignature::TwelveEight => microseconds_per_beat / 3,
-        };
-
-        loop {
-            let end = timer.get_counter();
-            let time_taken_us = (end - start).to_micros();
-
-            if time_taken_us > microseconds_per_interval {
-                break;
-            }
-        }
-
-        last_io_state = io_state;
     }
 }

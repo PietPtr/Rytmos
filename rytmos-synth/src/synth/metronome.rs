@@ -5,23 +5,18 @@ use rytmos_engrave::staff::{Accidental, Note};
 use crate::commands::Command;
 
 use super::{
-    samples::{strong::STRONG_WAV_24000, weak::WEAK_WAV_24000},
-    Synth,
+    sample::{SampleSynth, SampleSynthSettings},
+    samples, Synth,
 };
 
+// TODO: kinda useless as its just a subset of the drum synht?
 pub struct MetronomeSynth {
     sample: usize,
     velocity: U4F4,
-    play_sample: Option<Sample>,
     address: u32,
+    strong_synth: SampleSynth<samples::Strong>,
+    weak_synth: SampleSynth<samples::Weak>,
 }
-
-enum Sample {
-    Strong,
-    Weak,
-}
-
-// TODO: refactor to use 2 sample synths internally
 
 impl MetronomeSynth {}
 
@@ -33,7 +28,8 @@ impl Synth for MetronomeSynth {
             address,
             sample: 0,
             velocity: U4F4::from_num(0),
-            play_sample: None,
+            strong_synth: SampleSynth::make(address, SampleSynthSettings {}),
+            weak_synth: SampleSynth::make(address, SampleSynthSettings {}),
         }
     }
 
@@ -45,8 +41,8 @@ impl Synth for MetronomeSynth {
         self.velocity = velocity;
 
         match note {
-            Note::A(Accidental::Natural, _) => self.play_sample = Some(Sample::Strong),
-            Note::B(Accidental::Natural, _) => self.play_sample = Some(Sample::Weak),
+            Note::A(Accidental::Natural, _) => self.strong_synth.play(note, velocity),
+            Note::B(Accidental::Natural, _) => self.weak_synth.play(note, velocity),
             _ => info!("unknown metronome note {note:?}"),
         }
 
@@ -55,35 +51,9 @@ impl Synth for MetronomeSynth {
 
     // This cannot be synced to anything. Change it such that play actually plays the sample and decides on emphasis based on note.
     fn next(&mut self) -> I1F15 {
-        let sample = match self.play_sample {
-            Some(Sample::Strong) => {
-                let sample_to_play = STRONG_WAV_24000.get(self.sample);
-                self.sample += 1;
-
-                match sample_to_play {
-                    Some(sample) => *sample,
-                    None => {
-                        self.play_sample = None; // Exhausted audio fragment.
-                        I1F15::from_num(0)
-                    }
-                }
-            }
-            Some(Sample::Weak) => {
-                let sample_to_play = WEAK_WAV_24000.get(self.sample);
-                self.sample += 1;
-
-                match sample_to_play {
-                    Some(sample) => *sample,
-                    None => {
-                        self.play_sample = None;
-                        I1F15::from_num(0)
-                    }
-                }
-            }
-            None => I1F15::from_num(0),
-        };
-
-        sample
+        self.strong_synth
+            .next()
+            .saturating_add(self.weak_synth.next())
     }
 
     fn run_command(&mut self, command: Command) {

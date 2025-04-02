@@ -1,32 +1,38 @@
-use fixed::types::{I1F15, U4F4};
+use core::marker::PhantomData;
+
+use fixed::{
+    traits::Fixed,
+    types::{I1F15, U4F4},
+};
 use rytmos_engrave::staff::Note;
 
 use crate::commands::Command;
 
-use super::Synth;
+use super::{
+    samples::{sample, Sample},
+    Synth,
+};
 
-pub struct SampleSynth<'a> {
+pub struct SampleSynth<S: Sample> {
     place_in_sample: usize,
     velocity: U4F4,
     address: u32,
     is_playing: bool,
-    settings: SampleSynthSettings<'a>,
+    phantom: PhantomData<S>,
 }
 
-pub struct SampleSynthSettings<'a> {
-    pub sample: &'a [I1F15],
-}
+pub struct SampleSynthSettings {}
 
-impl<'a> Synth for SampleSynth<'a> {
-    type Settings = SampleSynthSettings<'a>;
+impl<S: Sample> Synth for SampleSynth<S> {
+    type Settings = SampleSynthSettings;
 
-    fn make(address: u32, settings: Self::Settings) -> Self {
+    fn make(address: u32, _settings: Self::Settings) -> Self {
         Self {
             address,
             place_in_sample: 0,
             velocity: U4F4::from_num(0),
             is_playing: false,
-            settings,
+            phantom: PhantomData {},
         }
     }
 
@@ -39,20 +45,20 @@ impl<'a> Synth for SampleSynth<'a> {
     }
 
     fn next(&mut self) -> I1F15 {
-        let sample = {
-            let sample_to_play = self.settings.sample.get(self.place_in_sample);
-            self.place_in_sample += 1;
+        if !self.is_playing {
+            return I1F15::ZERO;
+        }
 
-            match sample_to_play {
-                Some(sample) => *sample,
-                None => {
-                    self.is_playing = false; // Exhausted audio fragment.
-                    I1F15::from_num(0)
-                }
+        let sample_to_play = sample::<S>(self.place_in_sample);
+        self.place_in_sample += 1;
+
+        match sample_to_play {
+            Some(sample) => sample,
+            None => {
+                self.is_playing = false; // Exhausted audio fragment.
+                I1F15::from_num(0)
             }
-        };
-
-        sample
+        }
     }
 
     fn run_command(&mut self, command: Command) {

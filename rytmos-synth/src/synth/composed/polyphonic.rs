@@ -1,6 +1,9 @@
+#[cfg(feature = "defmt")]
 use defmt::warn;
 use fixed::types::{I1F15, U4F4};
 use heapless::Vec;
+#[cfg(not(feature = "defmt"))]
+use log::warn;
 use rytmos_engrave::staff::Note;
 
 /// TODO: move somewhere else
