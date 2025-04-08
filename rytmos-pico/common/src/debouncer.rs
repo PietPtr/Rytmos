@@ -1,3 +1,4 @@
+#[derive(Debug, Clone, Copy)]
 pub struct Debouncer {
     goal_stable_time: u32,
     current_stable_time: u32,

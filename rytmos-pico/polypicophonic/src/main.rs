@@ -20,6 +20,10 @@ use fugit::HertzU32;
 use heapless::Vec;
 use panic_probe as _;
 use pio_proc::pio_file;
+use polypicophonic::clavier::Clavier;
+use polypicophonic::interface::sandbox::SandboxInterface;
+use polypicophonic::interface::Interface;
+use polypicophonic::interface::PicoPianoHardware;
 use rp_pico::{
     entry,
     hal::{
@@ -180,11 +184,11 @@ fn main() -> ! {
 
     let mut clocks = ClocksManager::new(pac.CLOCKS);
 
-    common::setup_clocks!(pac, clocks, common::plls::SYS_PLL_CONFIG_307P2MHZ);
+    // common::setup_clocks!(pac, clocks, common::plls::SYS_PLL_CONFIG_307P2MHZ);
 
     let mut _delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().to_Hz());
 
-    let pins = gpio::Pins::new(
+    let pins = rp_pico::Pins::new(
         pac.IO_BANK0,
         pac.PADS_BANK0,
         sio.gpio_bank0,
@@ -204,299 +208,18 @@ fn main() -> ! {
     let mut timer = Timer::new(pac.TIMER, &mut pac.RESETS, &clocks);
     let mut alarm = timer.alarm_1().unwrap();
 
-    cortex_m::interrupt::free(move |cs| {
-        FIFO.borrow(cs).replace(Some(sio.fifo));
-
-        alarm
-            .schedule(Duration::<u32, 1, 1000000>::millis(1))
-            .unwrap();
-        alarm.enable_interrupt();
-
-        ALARM.borrow(cs).replace(Some(alarm));
-    });
-
-    let c_pin = pins.gpio4.into_pull_up_input();
-    let cis_pin = pins.gpio5.into_pull_up_input();
-    let d_pin = pins.gpio6.into_pull_up_input();
-    let dis_pin = pins.gpio7.into_pull_up_input();
-    let e_pin = pins.gpio8.into_pull_up_input();
-    let f_pin = pins.gpio9.into_pull_up_input();
-    let fis_pin = pins.gpio10.into_pull_up_input();
-    let g_pin = pins.gpio11.into_pull_up_input();
-    let gis_pin = pins.gpio19.into_pull_up_input();
-    let a_pin = pins.gpio18.into_pull_up_input();
-    let ais_pin = pins.gpio17.into_pull_up_input();
-    let b_pin = pins.gpio16.into_pull_up_input();
-
-    let fn0_pin = pins.gpio3.into_pull_up_input();
-    let fn1_pin = pins.gpio2.into_pull_up_input();
-    let fn2_pin = pins.gpio1.into_pull_up_input();
-    let fn3_pin = pins.gpio0.into_pull_up_input();
-
-    const DEBOUNCE_TIME: u32 = 10;
-    let mut fn0_debouncer = Debouncer::new(DEBOUNCE_TIME);
-    let mut fn1_debouncer = Debouncer::new(DEBOUNCE_TIME);
-    let mut fn2_debouncer = Debouncer::new(DEBOUNCE_TIME);
-    let mut fn3_debouncer = Debouncer::new(DEBOUNCE_TIME);
-
-    let mut c_debouncer = Debouncer::new(DEBOUNCE_TIME);
-    let mut cis_debouncer = Debouncer::new(DEBOUNCE_TIME);
-    let mut d_debouncer = Debouncer::new(DEBOUNCE_TIME);
-    let mut dis_debouncer = Debouncer::new(DEBOUNCE_TIME);
-    let mut e_debouncer = Debouncer::new(DEBOUNCE_TIME);
-    let mut f_debouncer = Debouncer::new(DEBOUNCE_TIME);
-    let mut fis_debouncer = Debouncer::new(DEBOUNCE_TIME);
-    let mut g_debouncer = Debouncer::new(DEBOUNCE_TIME);
-    let mut gis_debouncer = Debouncer::new(DEBOUNCE_TIME);
-    let mut a_debouncer = Debouncer::new(DEBOUNCE_TIME);
-    let mut ais_debouncer = Debouncer::new(DEBOUNCE_TIME);
-    let mut b_debouncer = Debouncer::new(DEBOUNCE_TIME);
-
-    info!("Start I/O thread.");
-
-    let mut octave = 4;
-    let attack = U4F4::from_num(1.0);
-
-    let mut button_states = [false; 12];
-
-    loop {
-        fn0_debouncer.update(fn0_pin.is_low().unwrap());
-        fn1_debouncer.update(fn1_pin.is_low().unwrap());
-        fn2_debouncer.update(fn2_pin.is_low().unwrap());
-        fn3_debouncer.update(fn3_pin.is_low().unwrap());
-
-        c_debouncer.update(c_pin.is_low().unwrap());
-        cis_debouncer.update(cis_pin.is_low().unwrap());
-        d_debouncer.update(d_pin.is_low().unwrap());
-        dis_debouncer.update(dis_pin.is_low().unwrap());
-        e_debouncer.update(e_pin.is_low().unwrap());
-        f_debouncer.update(f_pin.is_low().unwrap());
-        fis_debouncer.update(fis_pin.is_low().unwrap());
-        g_debouncer.update(g_pin.is_low().unwrap());
-        gis_debouncer.update(gis_pin.is_low().unwrap());
-        a_debouncer.update(a_pin.is_low().unwrap());
-        ais_debouncer.update(ais_pin.is_low().unwrap());
-        b_debouncer.update(b_pin.is_low().unwrap());
-
-        let new_button_states = [
-            c_pin.is_low().unwrap(),
-            cis_pin.is_low().unwrap(),
-            d_pin.is_low().unwrap(),
-            dis_pin.is_low().unwrap(),
-            e_pin.is_low().unwrap(),
-            f_pin.is_low().unwrap(),
-            fis_pin.is_low().unwrap(),
-            g_pin.is_low().unwrap(),
-            gis_pin.is_low().unwrap(),
-            a_pin.is_low().unwrap(),
-            ais_pin.is_low().unwrap(),
-            b_pin.is_low().unwrap(),
-        ];
-
-        // Of length four because the SIO fifo is length four
-        let mut messages: Vec<CommandMessage, 4> = Vec::new();
-        if new_button_states[NOTE_C] && !button_states[NOTE_C] {
-            let _ = messages.push(CommandMessage::Play(c!(octave), U4F4::from_num(attack)));
-        } else if !new_button_states[NOTE_C] && button_states[NOTE_C] {
-            let _ = messages.push(CommandMessage::Play(c!(octave), U4F4::from_num(0)));
-        }
-
-        if new_button_states[NOTE_CIS] && !button_states[NOTE_CIS] {
-            let _ = messages.push(CommandMessage::Play(cis!(octave), U4F4::from_num(attack)));
-        } else if !new_button_states[NOTE_CIS] && button_states[NOTE_CIS] {
-            let _ = messages.push(CommandMessage::Play(cis!(octave), U4F4::from_num(0)));
-        }
-
-        if new_button_states[NOTE_D] && !button_states[NOTE_D] {
-            let _ = messages.push(CommandMessage::Play(d!(octave), U4F4::from_num(attack)));
-        } else if !new_button_states[NOTE_D] && button_states[NOTE_D] {
-            let _ = messages.push(CommandMessage::Play(d!(octave), U4F4::from_num(0)));
-        }
-
-        if new_button_states[NOTE_DIS] && !button_states[NOTE_DIS] {
-            let _ = messages.push(CommandMessage::Play(dis!(octave), U4F4::from_num(attack)));
-        } else if !new_button_states[NOTE_DIS] && button_states[NOTE_DIS] {
-            let _ = messages.push(CommandMessage::Play(dis!(octave), U4F4::from_num(0)));
-        }
-
-        if new_button_states[NOTE_E] && !button_states[NOTE_E] {
-            let _ = messages.push(CommandMessage::Play(e!(octave), U4F4::from_num(attack)));
-        } else if !new_button_states[NOTE_E] && button_states[NOTE_E] {
-            let _ = messages.push(CommandMessage::Play(e!(octave), U4F4::from_num(0)));
-        }
-
-        if new_button_states[NOTE_F] && !button_states[NOTE_F] {
-            let _ = messages.push(CommandMessage::Play(f!(octave), U4F4::from_num(attack)));
-        } else if !new_button_states[NOTE_F] && button_states[NOTE_F] {
-            let _ = messages.push(CommandMessage::Play(f!(octave), U4F4::from_num(0)));
-        }
-
-        if new_button_states[NOTE_FIS] && !button_states[NOTE_FIS] {
-            let _ = messages.push(CommandMessage::Play(fis!(octave), U4F4::from_num(attack)));
-        } else if !new_button_states[NOTE_FIS] && button_states[NOTE_FIS] {
-            let _ = messages.push(CommandMessage::Play(fis!(octave), U4F4::from_num(0)));
-        }
-
-        if new_button_states[NOTE_G] && !button_states[NOTE_G] {
-            let _ = messages.push(CommandMessage::Play(g!(octave), U4F4::from_num(attack)));
-        } else if !new_button_states[NOTE_G] && button_states[NOTE_G] {
-            let _ = messages.push(CommandMessage::Play(g!(octave), U4F4::from_num(0)));
-        }
-
-        if new_button_states[NOTE_GIS] && !button_states[NOTE_GIS] {
-            let _ = messages.push(CommandMessage::Play(gis!(octave), U4F4::from_num(attack)));
-        } else if !new_button_states[NOTE_GIS] && button_states[NOTE_GIS] {
-            let _ = messages.push(CommandMessage::Play(gis!(octave), U4F4::from_num(0)));
-        }
-
-        if new_button_states[NOTE_A] && !button_states[NOTE_A] {
-            let _ = messages.push(CommandMessage::Play(a!(octave), U4F4::from_num(attack)));
-        } else if !new_button_states[NOTE_A] && button_states[NOTE_A] {
-            let _ = messages.push(CommandMessage::Play(a!(octave), U4F4::from_num(0)));
-        }
-
-        if new_button_states[NOTE_AIS] && !button_states[NOTE_AIS] {
-            let _ = messages.push(CommandMessage::Play(ais!(octave), U4F4::from_num(attack)));
-        } else if !new_button_states[NOTE_AIS] && button_states[NOTE_AIS] {
-            let _ = messages.push(CommandMessage::Play(ais!(octave), U4F4::from_num(0)));
-        }
-
-        if new_button_states[NOTE_B] && !button_states[NOTE_B] {
-            let _ = messages.push(CommandMessage::Play(b!(octave), U4F4::from_num(attack)));
-        } else if !new_button_states[NOTE_B] && button_states[NOTE_B] {
-            let _ = messages.push(CommandMessage::Play(b!(octave), U4F4::from_num(0)));
-        }
-
-        // ---- chords
-
-        const CONSTRUCTION: ChordConstruction = ChordConstruction::InvertToWithinOctave;
-
-        if let Ok(true) = fn1_debouncer.is_high() {
-            add_chord(&mut messages, ChordQuality::Major, CONSTRUCTION);
-            root_to_bass_register(&mut messages);
-        }
-
-        if let Ok(true) = fn3_debouncer.is_high() {
-            add_chord(&mut messages, ChordQuality::Minor, CONSTRUCTION);
-            root_to_bass_register(&mut messages);
-        }
-
-        // ----
-
-        for message in messages {
-            let command = Command {
-                address: 0x0,
-                message,
-            };
-            let command_serialized = command.serialize();
-
-            cortex_m::interrupt::free(|cs| {
-                let mut fifo = FIFO.borrow(cs).take().unwrap();
-                fifo.write(command_serialized);
-                FIFO.borrow(cs).replace(Some(fifo));
-            });
-        }
-
-        if let Ok(true) = fn0_debouncer.is_high() {
-            octave = 5
-        } else if let Ok(true) = fn2_debouncer.is_high() {
-            octave = 3
-        } else {
-            octave = 4
-        }
-
-        button_states = new_button_states;
-    }
-}
-
-enum ChordQuality {
-    Major,
-    Minor,
-}
-
-#[allow(dead_code)]
-enum ChordConstruction {
-    DiatonicUp,
-    InvertToWithinOctave,
-}
-
-fn root_to_bass_register(messages: &mut Vec<CommandMessage, 4>) {
-    let Some(root_message) = messages.first_mut() else {
-        return;
-    };
-
-    let CommandMessage::Play(root, _) = root_message else {
-        return;
-    };
-
-    root.map_octave(|_| 2);
-}
-
-fn add_chord(
-    messages: &mut Vec<CommandMessage, 4>,
-    quality: ChordQuality,
-    construction: ChordConstruction,
-) {
-    let (root, velocity) = {
-        let Some(root_message) = messages.first() else {
-            return;
-        };
-
-        let CommandMessage::Play(root, velocity) = root_message else {
-            return;
-        };
-
-        (*root, *velocity)
-    };
-
-    let (third, fifth) = match construction {
-        ChordConstruction::DiatonicUp => diatonic_up(root, quality),
-        ChordConstruction::InvertToWithinOctave => invert_to_within_octave(root, quality),
-    };
-
-    let _ = messages.push(CommandMessage::Play(third, velocity));
-    let _ = messages.push(CommandMessage::Play(fifth, velocity));
-}
-
-fn diatonic_up(root: Note, quality: ChordQuality) -> (Note, Note) {
-    let third = match quality {
-        ChordQuality::Major => Note::from_u8_flat(root.to_midi_code() + 4),
-        ChordQuality::Minor => Note::from_u8_flat(root.to_midi_code() + 3),
-    };
-
-    let fifth = Note::from_u8_flat(root.to_midi_code() + 7);
-
-    (third, fifth)
-}
-
-fn invert_to_within_octave(root: Note, quality: ChordQuality) -> (Note, Note) {
-    let (mut third, mut fifth) = diatonic_up(root, quality);
-
-    if third.octave() > root.octave() {
-        third = third.map_octave(|o| o - 1);
-        fifth = fifth.map_octave(|o| o - 1);
+    {
+        // TODO: do at boot check which interface should be created
     }
 
-    if fifth.octave() > root.octave() {
-        fifth = fifth.map_octave(|o| o - 1);
-    }
+    let hw = PicoPianoHardware {
+        fifo: sio.fifo,
+        clavier: Clavier::new(pins),
+    };
 
-    (third, fifth)
+    let interface = SandboxInterface::new(hw);
+
+    info!("Start interface thread.");
+
+    interface.start();
 }
-
-const NOTE_C: usize = 0;
-const NOTE_CIS: usize = 1;
-const NOTE_D: usize = 2;
-const NOTE_DIS: usize = 3;
-const NOTE_E: usize = 4;
-const NOTE_F: usize = 5;
-const NOTE_FIS: usize = 6;
-const NOTE_G: usize = 7;
-const NOTE_GIS: usize = 8;
-const NOTE_A: usize = 9;
-const NOTE_AIS: usize = 10;
-const NOTE_B: usize = 11;
-// const FN_0: usize = 12;
-// const FN_1: usize = 13;
-// const FN_2: usize = 14;
-// const FN_3: usize = 15;

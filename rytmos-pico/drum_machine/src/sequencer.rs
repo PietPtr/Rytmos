@@ -25,7 +25,7 @@ pub struct Sequencer {
     sequence: Sequence,
     subdivision_index: u8,
     state: SequencerState,
-    volumes: [U4F4; 3],
+    volumes: [U4F4; 3], // TODO: volumes per instrument
     // expression:
     pub time_signature: SequenceTimeSignature,
     pub cymbal_every_four_measures: bool,
