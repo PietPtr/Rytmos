@@ -196,6 +196,7 @@ fn main() -> ! {
     let mut mc = Multicore::new(&mut pac.PSM, &mut pac.PPB, &mut sio.fifo);
     let cores = mc.cores();
     let core1 = &mut cores[1];
+    #[allow(static_mut_refs)]
     let _test = core1.spawn(unsafe { &mut CORE1_STACK.mem }, move || {
         synth_core(sys_freq)
     });
@@ -375,7 +376,7 @@ fn main() -> ! {
             root_to_bass_register(&mut messages);
         }
 
-        if let Ok(true) = fn1_debouncer.is_high() {
+        if let Ok(true) = fn3_debouncer.is_high() {
             add_chord(&mut messages, ChordQuality::Minor, CONSTRUCTION);
             root_to_bass_register(&mut messages);
         }
@@ -472,12 +473,12 @@ fn invert_to_within_octave(root: Note, quality: ChordQuality) -> (Note, Note) {
     let (mut third, mut fifth) = diatonic_up(root, quality);
 
     if third.octave() > root.octave() {
-        third.map_octave(|o| o - 1);
-        fifth.map_octave(|o| o - 1);
+        third = third.map_octave(|o| o - 1);
+        fifth = fifth.map_octave(|o| o - 1);
     }
 
     if fifth.octave() > root.octave() {
-        fifth.map_octave(|o| o - 1);
+        fifth = fifth.map_octave(|o| o - 1);
     }
 
     (third, fifth)
