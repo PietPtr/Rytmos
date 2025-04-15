@@ -2,7 +2,7 @@
 //! An interface takes ownership of all the physical hardware on the board
 //! and of the inter-process FIFO. It exposes a start function which loops as necessary.
 
-use rp_pico::{hal::sio::SioFifo, Pins};
+use rp_pico::hal::sio::SioFifo;
 
 use crate::clavier::Clavier;
 

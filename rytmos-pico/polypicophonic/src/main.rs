@@ -6,24 +6,15 @@
 #[used]
 pub static BOOT2_FIRMWARE: [u8; 256] = rp2040_boot2::BOOT_LOADER_W25Q080;
 
-use core::cell::RefCell;
-
-use cortex_m::{interrupt::Mutex, singleton};
+use cortex_m::singleton;
 #[allow(unused_imports)]
 use defmt::{error, info, warn};
 use defmt_rtt as _;
-use embedded_hal::digital::v2::InputPin;
 use fixed::types::I1F15;
-use fixed::types::U4F4;
-use fugit::Duration;
 use fugit::HertzU32;
-use heapless::Vec;
 use panic_probe as _;
 use pio_proc::pio_file;
-use polypicophonic::clavier::Clavier;
-use polypicophonic::interface::sandbox::SandboxInterface;
-use polypicophonic::interface::Interface;
-use polypicophonic::interface::PicoPianoHardware;
+use rp_pico::pac;
 use rp_pico::{
     entry,
     hal::{
@@ -32,31 +23,36 @@ use rp_pico::{
         gpio::{self, FunctionPio0},
         multicore::{Multicore, Stack},
         pio::{Buffers, PIOBuilder, PIOExt, PinDir, ShiftDirection},
-        pll::{common_configs::PLL_USB_48MHZ, setup_pll_blocking},
-        sio::{Sio, SioFifo},
-        timer::{Alarm, Alarm1},
+        pll::{common_configs::PLL_USB_48MHZ, setup_pll_blocking, PLLConfig},
+        sio::Sio,
         watchdog::Watchdog,
         xosc::setup_xosc_blocking,
-        Timer,
     },
-    pac,
 };
 
 use common::consts::*;
-use common::debouncer::Debouncer;
-use rytmos_engrave::staff::Note;
-use rytmos_engrave::{a, ais, b, c, cis, d, dis, e, f, fis, g, gis};
-use rytmos_synth::commands::CommandMessage;
-use rytmos_synth::effect::linear_decay::LinearDecay;
-use rytmos_synth::effect::linear_decay::LinearDecaySettings;
-use rytmos_synth::effect::lpf::LowPassFilter;
-use rytmos_synth::effect::lpf::LowPassFilterSettings;
-use rytmos_synth::synth::composed::polyphonic::PolyphonicSynth;
-use rytmos_synth::synth::composed::synth_with_effects::SynthWithEffect;
-use rytmos_synth::synth::composed::synth_with_effects::SynthWithEffectSettings;
-use rytmos_synth::synth::sine::SineSynth;
-use rytmos_synth::synth::sine::SineSynthSettings;
-use rytmos_synth::{commands::Command, synth::Synth};
+use rytmos_synth::{
+    commands::Command,
+    effect::{
+        linear_decay::{LinearDecay, LinearDecaySettings},
+        lpf::{LowPassFilter, LowPassFilterSettings},
+    },
+    synth::{
+        composed::{
+            polyphonic::PolyphonicSynth,
+            synth_with_effects::{SynthWithEffect, SynthWithEffectSettings},
+        },
+        sine::{SineSynth, SineSynthSettings},
+        Synth,
+    },
+};
+
+use polypicophonic::{
+    clavier::{Clavier, KeyId},
+    interface::{
+        chordloops::ChordLoopInterface, sandbox::SandboxInterface, Interface, PicoPianoHardware,
+    },
+};
 
 static mut CORE1_STACK: Stack<4096> = Stack::new();
 
@@ -120,7 +116,6 @@ fn synth_core(sys_freq: u32) -> ! {
 
     info!("Start Synth core.");
 
-    // type Synth = SynthWithEffect<SynthWithEffect<SineSynth, LinearDecay>, LowPassFilter>;
     type WaveSynth = SineSynth;
     type Synth = SynthWithEffect<SynthWithEffect<WaveSynth, LinearDecay>, LowPassFilter>;
 
@@ -170,8 +165,12 @@ fn synth_core(sys_freq: u32) -> ! {
     }
 }
 
-static FIFO: Mutex<RefCell<Option<SioFifo>>> = Mutex::new(RefCell::new(None));
-static ALARM: Mutex<RefCell<Option<Alarm1>>> = Mutex::new(RefCell::new(None));
+pub const SYS_PLL_CONFIG_307P2MHZ: PLLConfig = PLLConfig {
+    vco_freq: HertzU32::MHz(1536),
+    refdiv: 1,
+    post_div1: 5,
+    post_div2: 1,
+};
 
 #[entry]
 fn main() -> ! {
@@ -184,7 +183,68 @@ fn main() -> ! {
 
     let mut clocks = ClocksManager::new(pac.CLOCKS);
 
-    // common::setup_clocks!(pac, clocks, common::plls::SYS_PLL_CONFIG_307P2MHZ);
+    let xosc = setup_xosc_blocking(pac.XOSC, EXTERNAL_XTAL_FREQ_HZ)
+        .map_err(InitError::XoscErr)
+        .ok()
+        .unwrap();
+    {
+        let pll_sys = setup_pll_blocking(
+            pac.PLL_SYS,
+            xosc.operating_frequency(),
+            SYS_PLL_CONFIG_307P2MHZ,
+            &mut clocks,
+            &mut pac.RESETS,
+        )
+        .map_err(InitError::PllError)
+        .ok()
+        .unwrap();
+        let pll_usb = setup_pll_blocking(
+            pac.PLL_USB,
+            xosc.operating_frequency(),
+            PLL_USB_48MHZ,
+            &mut clocks,
+            &mut pac.RESETS,
+        )
+        .map_err(InitError::PllError)
+        .ok()
+        .unwrap();
+        clocks
+            .reference_clock
+            .configure_clock(&xosc, xosc.get_freq())
+            .map_err(InitError::ClockError)
+            .ok()
+            .unwrap();
+        clocks
+            .system_clock
+            .configure_clock(&pll_sys, pll_sys.get_freq())
+            .map_err(InitError::ClockError)
+            .ok()
+            .unwrap();
+        clocks
+            .usb_clock
+            .configure_clock(&pll_usb, pll_usb.get_freq())
+            .map_err(InitError::ClockError)
+            .ok()
+            .unwrap();
+        clocks
+            .adc_clock
+            .configure_clock(&pll_usb, pll_usb.get_freq())
+            .map_err(InitError::ClockError)
+            .ok()
+            .unwrap();
+        clocks
+            .rtc_clock
+            .configure_clock(&pll_usb, HertzU32::from_raw(46875u32))
+            .map_err(InitError::ClockError)
+            .ok()
+            .unwrap();
+        clocks
+            .peripheral_clock
+            .configure_clock(&clocks.system_clock, clocks.system_clock.freq())
+            .map_err(InitError::ClockError)
+            .ok()
+            .unwrap();
+    }
 
     let mut _delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().to_Hz());
 
@@ -205,21 +265,18 @@ fn main() -> ! {
         synth_core(sys_freq)
     });
 
-    let mut timer = Timer::new(pac.TIMER, &mut pac.RESETS, &clocks);
-    let mut alarm = timer.alarm_1().unwrap();
-
-    {
-        // TODO: do at boot check which interface should be created
-    }
-
     let hw = PicoPianoHardware {
         fifo: sio.fifo,
         clavier: Clavier::new(pins),
     };
 
-    let interface = SandboxInterface::new(hw);
-
-    info!("Start interface thread.");
-
-    interface.start();
+    if hw.clavier.debouncer_is_high(KeyId::NoteC) {
+        info!("Start chord loop interface.");
+        let interface = ChordLoopInterface::new(hw);
+        interface.start();
+    } else {
+        info!("Start sandbox interface.");
+        let interface = SandboxInterface::new(hw);
+        interface.start();
+    }
 }

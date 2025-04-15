@@ -1,8 +1,6 @@
-use common::debouncer::Debouncer;
-use embedded_hal::digital::v2::InputPin;
 use fixed::types::U4F4;
 use heapless::Vec;
-use rytmos_engrave::{a, ais, b, c, cis, d, dis, e, f, fis, g, gis};
+
 use rytmos_synth::commands::{Command, CommandMessage};
 
 use crate::{
@@ -27,8 +25,6 @@ impl Interface for SandboxInterface {
         let mut octave = 4;
         let attack = U4F4::ONE;
 
-        let mut button_states = [false; 12];
-
         loop {
             self.hw.clavier.update_debouncers();
 
@@ -48,12 +44,12 @@ impl Interface for SandboxInterface {
 
             const CONSTRUCTION: ChordConstruction = ChordConstruction::InvertToWithinOctave;
 
-            if let Some(true) = self.hw.clavier.debouncer_is_high(KeyId::Fn1) {
+            if self.hw.clavier.debouncer_is_high(KeyId::Fn1) {
                 chords::add_chord(&mut messages, ChordQuality::Major, CONSTRUCTION);
                 chords::root_to_bass_register(&mut messages);
             }
 
-            if let Some(true) = self.hw.clavier.debouncer_is_high(KeyId::Fn3) {
+            if self.hw.clavier.debouncer_is_high(KeyId::Fn3) {
                 chords::add_chord(&mut messages, ChordQuality::Minor, CONSTRUCTION);
                 chords::root_to_bass_register(&mut messages);
             }
@@ -70,9 +66,9 @@ impl Interface for SandboxInterface {
                 self.hw.fifo.write(command_serialized);
             }
 
-            if let Some(true) = self.hw.clavier.debouncer_is_high(KeyId::Fn0) {
+            if self.hw.clavier.debouncer_is_high(KeyId::Fn0) {
                 octave = 5
-            } else if let Some(true) = self.hw.clavier.debouncer_is_high(KeyId::Fn2) {
+            } else if self.hw.clavier.debouncer_is_high(KeyId::Fn2) {
                 octave = 3
             } else {
                 octave = 4

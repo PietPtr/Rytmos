@@ -1,3 +1,4 @@
+use defmt::error;
 use embedded_hal::digital::v2::InputPin;
 use fixed::types::U4F4;
 use heapless::Vec;
@@ -7,7 +8,7 @@ use rp_pico::hal::gpio::{bank0::*, FunctionSioInput, Pin, PullUp};
 use rytmos_engrave::staff::Note;
 use rytmos_engrave::{a, ais, b, c, cis, d, dis, e, f, fis, g, gis};
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum KeyId {
     NoteC,
     NoteCis,
@@ -119,6 +120,7 @@ impl ClavierKeys {
 pub struct Clavier {
     pub keys: ClavierKeys,
     pub debouncers: [Debouncer; 16],
+    last_note_events: Vec<NoteEvent, 4>,
     last_notes_state: [bool; 12],
 }
 
@@ -130,6 +132,7 @@ impl Clavier {
             keys: ClavierKeys::new(pins),
             debouncers: [Debouncer::new(DEBOUNCE_TIME); 16],
             last_notes_state: [false; 12],
+            last_note_events: Vec::new(),
         }
     }
 
@@ -140,17 +143,26 @@ impl Clavier {
         }
     }
 
-    pub fn debouncer_is_high(&self, key: KeyId) -> Option<bool> {
+    pub fn debouncer_is_high(&self, key: KeyId) -> bool {
         let key = key as usize;
-        let debouncer = self.debouncers.get(key)?;
-        debouncer.is_high().ok()
+        self.debouncers
+            .get(key)
+            .and_then(|debouncer| debouncer.is_high().ok())
+            .unwrap_or_else(|| {
+                error!("No debouncer for key ID: {}", key);
+                false
+            })
+    }
+
+    pub fn note_events(&self) -> &[NoteEvent] {
+        &self.last_note_events
     }
 
     /// Reads all current note states, compares them with the last read,
     /// finds which events should be fired and returns those, and saves
     /// the read states.
     /// Does not debounce.
-    pub fn note_events(&mut self) -> Vec<NoteEvent, 4> {
+    pub(crate) fn update_note_events(&mut self) {
         let new_notes_states = [
             self.keys.read(KeyId::NoteC),
             self.keys.read(KeyId::NoteCis),
@@ -257,11 +269,11 @@ impl Clavier {
         }
 
         self.last_notes_state = new_notes_states;
-
-        events
+        self.last_note_events = events;
     }
 }
 
+#[derive(Debug, PartialEq, Eq)]
 pub enum NoteEvent {
     NoteUp(KeyId),
     NoteDown(KeyId),

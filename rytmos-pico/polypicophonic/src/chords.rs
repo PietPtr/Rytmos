@@ -2,8 +2,6 @@ use heapless::Vec;
 use rytmos_engrave::staff::Note;
 use rytmos_synth::commands::CommandMessage;
 
-use crate::clavier::NoteEvent;
-
 pub enum ChordQuality {
     Major,
     Minor,
