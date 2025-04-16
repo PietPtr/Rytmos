@@ -56,6 +56,10 @@ impl Debouncer {
     pub fn stable_rising_edge(&self) -> bool {
         self.current_stable_state && !self.last_stable_state
     }
+
+    pub fn stable_falling_edge(&self) -> bool {
+        !self.current_stable_state && self.last_stable_state
+    }
 }
 
 #[derive(Debug, defmt::Format)]
