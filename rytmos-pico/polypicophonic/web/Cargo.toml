@@ -1,6 +1,17 @@
 [package]
-name = "web"
+name = "polypicophonic-web"
 version = "0.1.0"
-edition = "2024"
+edition = "2021"
+publish = false
 
 [dependencies]
+reqwest = "0.12.15"
+serde = "1.0.219"
+dioxus = { version = "0.6.3", features = ["fullstack"] }
+polypicophonic = { path = "../polypicophonic" }
+tracing = "0.1.41"
+
+[features]
+default = []
+server = ["dioxus/server"]
+web = ["dioxus/web"]

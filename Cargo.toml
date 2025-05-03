@@ -54,3 +54,13 @@ debug = false
 debug-assertions = false
 opt-level = 0
 overflow-checks = false
+
+[profile.wasm-dev]
+inherits = "dev"
+opt-level = 1
+
+[profile.server-dev]
+inherits = "dev"
+
+[profile.android-dev]
+inherits = "dev"
