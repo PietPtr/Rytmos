@@ -5,30 +5,35 @@ use rytmos_synth::commands::{Command, CommandMessage};
 
 use crate::{
     chords::{self, ChordConstruction, ChordQuality},
-    clavier::KeyId,
+    clavier::{Clavier, KeyId},
+    io::{self, IO},
 };
 
-use super::{Interface, PicoPianoHardware};
+use super::Interface;
 
-pub struct SandboxInterface {
-    hw: PicoPianoHardware,
+pub struct SandboxInterface<FIFO, CLAVIER> {
+    fifo: FIFO,
+    clavier: Clavier<CLAVIER>,
 }
 
-impl SandboxInterface {
-    pub fn new(hw: PicoPianoHardware) -> Self {
-        Self { hw }
+impl<FIFO: io::Fifo, CLAVIER: io::ClavierPins> SandboxInterface<FIFO, CLAVIER> {
+    pub fn new(io: IO<FIFO, CLAVIER>) -> Self {
+        Self {
+            fifo: io.fifo,
+            clavier: Clavier::new(io.clavier),
+        }
     }
 }
 
-impl Interface for SandboxInterface {
+impl<FIFO: io::Fifo, CLAVIER: io::ClavierPins> Interface for SandboxInterface<FIFO, CLAVIER> {
     fn start(mut self) -> ! {
         let mut octave = 4;
         let attack = U4F4::ONE;
 
         loop {
-            self.hw.clavier.update_debouncers();
+            self.clavier.update_debouncers();
 
-            let events = self.hw.clavier.note_events();
+            let events = self.clavier.note_events();
 
             let mut messages = events
                 .iter()
@@ -44,12 +49,12 @@ impl Interface for SandboxInterface {
 
             const CONSTRUCTION: ChordConstruction = ChordConstruction::InvertToWithinOctave;
 
-            if self.hw.clavier.debouncer_is_high(KeyId::Fn1) {
+            if self.clavier.debouncer_is_high(KeyId::Fn1) {
                 chords::add_chord(&mut messages, ChordQuality::Major, CONSTRUCTION);
                 chords::root_to_bass_register(&mut messages);
             }
 
-            if self.hw.clavier.debouncer_is_high(KeyId::Fn3) {
+            if self.clavier.debouncer_is_high(KeyId::Fn3) {
                 chords::add_chord(&mut messages, ChordQuality::Minor, CONSTRUCTION);
                 chords::root_to_bass_register(&mut messages);
             }
@@ -63,12 +68,12 @@ impl Interface for SandboxInterface {
                 };
                 let command_serialized = command.serialize();
 
-                self.hw.fifo.write(command_serialized);
+                self.fifo.write(command_serialized);
             }
 
-            if self.hw.clavier.debouncer_is_high(KeyId::Fn0) {
+            if self.clavier.debouncer_is_high(KeyId::Fn0) {
                 octave = 5
-            } else if self.hw.clavier.debouncer_is_high(KeyId::Fn2) {
+            } else if self.clavier.debouncer_is_high(KeyId::Fn2) {
                 octave = 3
             } else {
                 octave = 4

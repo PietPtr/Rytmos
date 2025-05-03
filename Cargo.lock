@@ -1034,7 +1034,7 @@ dependencies = [
  "fugit",
  "log",
  "panic-probe",
- "rp-pico 0.8.0",
+ "rp-pico",
  "rp2040-boot2",
 ]
 
@@ -1055,31 +1055,6 @@ name = "humantime"
 version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9a3a5bfb195931eeb336b2a7b4d761daec841b97f947d34394601737a7bba5e4"
-
-[[package]]
-name = "i2s-testbed"
-version = "0.1.0"
-dependencies = [
- "common",
- "cortex-m",
- "cortex-m-rt",
- "defmt 0.3.100",
- "defmt-rtt 0.4.1",
- "embedded-hal 0.2.7",
- "fixed",
- "fugit",
- "heapless 0.7.17",
- "libm",
- "log",
- "micromath",
- "panic-probe",
- "pio",
- "pio-proc",
- "rp-pico 0.8.0",
- "rp2040-boot2",
- "rytmos-engrave",
- "rytmos-synth",
-]
 
 [[package]]
 name = "iana-time-zone"
@@ -1174,15 +1149,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "itertools"
-version = "0.13.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "413ee7dfc52ee1a4949ceeb7dbc8a33f2d6c088194d9f922fb8318faf1f01186"
-dependencies = [
- "either",
-]
-
-[[package]]
 name = "jpeg-decoder"
 version = "0.1.22"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1217,7 +1183,7 @@ dependencies = [
  "diff",
  "ena",
  "is-terminal",
- "itertools 0.10.5",
+ "itertools",
  "lalrpop-util",
  "petgraph",
  "regex",
@@ -1302,25 +1268,6 @@ name = "micromath"
 version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c3c8dda44ff03a2f238717214da50f65d5a53b45cd213a7370424ffdb6fae815"
-
-[[package]]
-name = "midi_pedals"
-version = "0.1.0"
-dependencies = [
- "common",
- "cortex-m",
- "cortex-m-rt",
- "defmt 0.3.100",
- "defmt-rtt 0.4.1",
- "embedded-hal 0.2.7",
- "fugit",
- "log",
- "panic-probe",
- "rp-pico 0.9.0",
- "rp2040-boot2",
- "usb-device 0.3.2",
- "usbd-midi",
-]
 
 [[package]]
 name = "miniz_oxide"
@@ -1427,16 +1374,7 @@ version = "0.5.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1f646caf906c20226733ed5b1374287eb97e3c2a5c227ce668c1f2ce20ae57c9"
 dependencies = [
- "num_enum_derive 0.5.11",
-]
-
-[[package]]
-name = "num_enum"
-version = "0.7.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4e613fc340b2220f734a8595782c551f1250e969d87d3be1ae0579e8d4065179"
-dependencies = [
- "num_enum_derive 0.7.3",
+ "num_enum_derive",
 ]
 
 [[package]]
@@ -1448,17 +1386,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 1.0.109",
-]
-
-[[package]]
-name = "num_enum_derive"
-version = "0.7.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "af1844ef2428cc3e1cb900be36181049ef3d3193c63e43026cfe202983b27a56"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.100",
 ]
 
 [[package]]
@@ -1569,42 +1496,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "pico-piano"
-version = "0.1.0"
-dependencies = [
- "common",
- "cortex-m",
- "cortex-m-rt",
- "defmt 0.3.100",
- "defmt-rtt 0.4.1",
- "embedded-graphics",
- "embedded-hal 0.2.7",
- "fixed",
- "fugit",
- "heapless 0.7.17",
- "libm",
- "log",
- "micromath",
- "panic-probe",
- "pio",
- "pio-proc",
- "rp-pico 0.8.0",
- "rp2040-boot2",
- "rytmos-engrave",
- "rytmos-scribe",
- "rytmos-synth",
- "rytmos-ui",
- "sh1106",
-]
-
-[[package]]
 name = "pio"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "76e09694b50f89f302ed531c1f2a7569f0be5867aee4ab4f8f729bbeec0078e3"
 dependencies = [
  "arrayvec",
- "num_enum 0.5.11",
+ "num_enum",
  "paste",
 ]
 
@@ -1719,29 +1617,37 @@ name = "polypicophonic"
 version = "0.1.0"
 dependencies = [
  "common",
+ "defmt 0.3.100",
+ "enum-iterator",
+ "fixed",
+ "heapless 0.7.17",
+ "log",
+ "rytmos-engrave",
+ "rytmos-synth",
+]
+
+[[package]]
+name = "polypicophonic-rp2040"
+version = "0.1.0"
+dependencies = [
+ "common",
  "cortex-m",
  "cortex-m-rt",
  "defmt 0.3.100",
  "defmt-rtt 0.4.1",
  "embedded-graphics",
  "embedded-hal 0.2.7",
- "enum-iterator",
  "fixed",
  "fugit",
  "heapless 0.7.17",
- "libm",
  "log",
- "micromath",
  "panic-probe",
  "pio",
  "pio-proc",
- "rp-pico 0.8.0",
+ "polypicophonic",
+ "rp-pico",
  "rp2040-boot2",
- "rytmos-engrave",
- "rytmos-scribe",
  "rytmos-synth",
- "rytmos-ui",
- "sh1106",
 ]
 
 [[package]]
@@ -1757,24 +1663,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "77957b295656769bb8ad2b6a6b09d897d94f05c41b069aede1fcdaa675eaea04"
 dependencies = [
  "zerocopy",
-]
-
-[[package]]
-name = "practice_bass"
-version = "0.1.0"
-dependencies = [
- "common",
- "cortex-m",
- "cortex-m-rt",
- "defmt 0.3.100",
- "defmt-rtt 0.4.1",
- "embedded-hal 0.2.7",
- "fugit",
- "log",
- "panic-probe",
- "rp235x-hal",
- "usb-device 0.3.2",
- "usbd-midi",
 ]
 
 [[package]]
@@ -1953,37 +1841,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7a66a03ae7c801facd77a29370b4faec201768915ac14a721ba36f20bc9c209b"
 
 [[package]]
-name = "riscv"
-version = "0.11.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2f5c1b8bf41ea746266cdee443d1d1e9125c86ce1447e1a2615abd34330d33a9"
-dependencies = [
- "critical-section",
- "embedded-hal 1.0.0",
-]
-
-[[package]]
-name = "riscv-rt"
-version = "0.12.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c0d35e32cf1383183e8885d8a9aa4402a087fd094dc34c2cb6df6687d0229dfe"
-dependencies = [
- "riscv",
- "riscv-rt-macros",
-]
-
-[[package]]
-name = "riscv-rt-macros"
-version = "0.2.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "30f19a85fe107b65031e0ba8ec60c34c2494069fe910d6c297f5e7cb5a6f76d0"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.100",
-]
-
-[[package]]
 name = "rp-binary-info"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2011,18 +1868,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rp-pico"
-version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b9342d3ac7011ac688300979e9b52a81f0add1d05feb02868cf94bfee0705b28"
-dependencies = [
- "cortex-m-rt",
- "fugit",
- "rp2040-hal 0.10.2",
- "usb-device 0.3.2",
-]
-
-[[package]]
 name = "rp2040-boot2"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2043,7 +1888,7 @@ dependencies = [
  "embedded-hal 0.2.7",
  "frunk",
  "fugit",
- "itertools 0.10.5",
+ "itertools",
  "nb 1.1.0",
  "paste",
  "pio",
@@ -2051,35 +1896,6 @@ dependencies = [
  "rp2040-hal-macros",
  "rp2040-pac 0.5.0",
  "usb-device 0.2.9",
- "vcell",
- "void",
-]
-
-[[package]]
-name = "rp2040-hal"
-version = "0.10.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d11e711940087f2cdff8aeae9f4b902e2014c06a00b39a1092686b81ec973d6f"
-dependencies = [
- "bitfield 0.14.0",
- "cortex-m",
- "critical-section",
- "embedded-dma",
- "embedded-hal 0.2.7",
- "embedded-hal 1.0.0",
- "embedded-hal-async",
- "embedded-hal-nb",
- "embedded-io",
- "frunk",
- "fugit",
- "itertools 0.10.5",
- "nb 1.1.0",
- "paste",
- "pio",
- "rand_core",
- "rp2040-hal-macros",
- "rp2040-pac 0.6.0",
- "usb-device 0.3.2",
  "vcell",
  "void",
 ]
@@ -2101,7 +1917,7 @@ dependencies = [
  "embedded-io",
  "frunk",
  "fugit",
- "itertools 0.10.5",
+ "itertools",
  "nb 1.1.0",
  "paste",
  "pio",
@@ -2144,65 +1960,6 @@ name = "rp2040-pac"
 version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "83cbcd3f7a0ca7bbe61dc4eb7e202842bee4e27b769a7bf3a4a72fa399d6e404"
-dependencies = [
- "cortex-m",
- "cortex-m-rt",
- "critical-section",
- "vcell",
-]
-
-[[package]]
-name = "rp235x-hal"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e2939c82776b0b4ae110168b4298b5adf831e6cff249b057bf2a2187453b959c"
-dependencies = [
- "bitfield 0.14.0",
- "cortex-m",
- "cortex-m-rt",
- "critical-section",
- "embedded-dma",
- "embedded-hal 0.2.7",
- "embedded-hal 1.0.0",
- "embedded-hal-async",
- "embedded-hal-nb",
- "embedded-io",
- "frunk",
- "fugit",
- "gcd",
- "itertools 0.13.0",
- "nb 1.1.0",
- "paste",
- "pio",
- "rand_core",
- "riscv",
- "riscv-rt",
- "rp-binary-info",
- "rp-hal-common",
- "rp235x-hal-macros",
- "rp235x-pac",
- "sha2-const-stable",
- "usb-device 0.3.2",
- "vcell",
- "void",
-]
-
-[[package]]
-name = "rp235x-hal-macros"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "74edd7a5979e9763bbb98e9746e711bac7464ee3397af7288e6c288ff0d3c764"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.100",
-]
-
-[[package]]
-name = "rp235x-pac"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5ffcb6931deee4242886b5a1df62db5e2555b0eb6ae1e8be101f3ea3e58e65c6"
 dependencies = [
  "cortex-m",
  "cortex-m-rt",
@@ -2301,35 +2058,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rytmos-zero"
-version = "0.1.0"
-dependencies = [
- "common",
- "cortex-m",
- "cortex-m-rt",
- "defmt 0.3.100",
- "defmt-rtt 0.4.1",
- "embedded-graphics",
- "embedded-hal 0.2.7",
- "fixed",
- "fugit",
- "heapless 0.7.17",
- "libm",
- "log",
- "micromath",
- "panic-probe",
- "pio",
- "pio-proc",
- "rp-pico 0.8.0",
- "rp2040-boot2",
- "rytmos-engrave",
- "rytmos-scribe",
- "rytmos-synth",
- "rytmos-ui",
- "sh1106",
-]
-
-[[package]]
 name = "same-file"
 version = "1.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2393,22 +2121,6 @@ name = "semver-parser"
 version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "388a1df253eca08550bef6c72392cfe7c30914bf41df5269b68cbd6ff8f570a3"
-
-[[package]]
-name = "sh1106"
-version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dc12a0563ec9b3b1f99b1f64613581ebbade1347416a34766564f406c15d1bf3"
-dependencies = [
- "embedded-graphics-core",
- "embedded-hal 0.2.7",
-]
-
-[[package]]
-name = "sha2-const-stable"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5f179d4e11094a893b82fff208f74d448a7512f99f5a0acbd5c679b705f83ed9"
 
 [[package]]
 name = "shlex"
@@ -2625,20 +2337,8 @@ version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "98816b1accafbb09085168b90f27e93d790b4bfa19d883466b5e53315b5f06a6"
 dependencies = [
- "defmt 0.3.100",
  "heapless 0.8.0",
- "log",
  "portable-atomic",
-]
-
-[[package]]
-name = "usbd-midi"
-version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a88782a02de4ea460cd84dc5cc8007a27618a5a8bb14514699dba5e7dcf9a590"
-dependencies = [
- "num_enum 0.7.3",
- "usb-device 0.3.2",
 ]
 
 [[package]]
@@ -2750,6 +2450,10 @@ name = "wasm-bindgen-shared"
 version = "0.2.93"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c62a0a307cb4a311d3a07867860911ca130c3494e8c2719593806c08bc5d0484"
+
+[[package]]
+name = "web"
+version = "0.1.0"
 
 [[package]]
 name = "web-sys"

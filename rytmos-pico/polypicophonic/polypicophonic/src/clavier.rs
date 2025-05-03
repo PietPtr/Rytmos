@@ -1,12 +1,12 @@
 use defmt::error;
-use embedded_hal::digital::v2::InputPin;
 use fixed::types::U4F4;
 use heapless::Vec;
 
 use common::debouncer::Debouncer;
-use rp_pico::hal::gpio::{bank0::*, FunctionSioInput, Pin, PullUp};
 use rytmos_engrave::staff::Note;
 use rytmos_engrave::{a, ais, b, c, cis, d, dis, e, f, fis, g, gis};
+
+use crate::io::ClavierPins;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum KeyId {
@@ -54,71 +54,8 @@ impl TryFrom<usize> for KeyId {
     }
 }
 
-pub struct ClavierKeys {
-    c_pin: Pin<Gpio4, FunctionSioInput, PullUp>,
-    cis_pin: Pin<Gpio5, FunctionSioInput, PullUp>,
-    d_pin: Pin<Gpio6, FunctionSioInput, PullUp>,
-    dis_pin: Pin<Gpio7, FunctionSioInput, PullUp>,
-    e_pin: Pin<Gpio8, FunctionSioInput, PullUp>,
-    f_pin: Pin<Gpio9, FunctionSioInput, PullUp>,
-    fis_pin: Pin<Gpio10, FunctionSioInput, PullUp>,
-    g_pin: Pin<Gpio11, FunctionSioInput, PullUp>,
-    gis_pin: Pin<Gpio19, FunctionSioInput, PullUp>,
-    a_pin: Pin<Gpio18, FunctionSioInput, PullUp>,
-    ais_pin: Pin<Gpio17, FunctionSioInput, PullUp>,
-    b_pin: Pin<Gpio16, FunctionSioInput, PullUp>,
-    fn0_pin: Pin<Gpio3, FunctionSioInput, PullUp>,
-    fn1_pin: Pin<Gpio2, FunctionSioInput, PullUp>,
-    fn2_pin: Pin<Gpio1, FunctionSioInput, PullUp>,
-    fn3_pin: Pin<Gpio0, FunctionSioInput, PullUp>,
-}
-
-impl ClavierKeys {
-    pub fn new(pins: rp_pico::Pins) -> Self {
-        Self {
-            c_pin: pins.gpio4.into_pull_up_input(),
-            cis_pin: pins.gpio5.into_pull_up_input(),
-            d_pin: pins.gpio6.into_pull_up_input(),
-            dis_pin: pins.gpio7.into_pull_up_input(),
-            e_pin: pins.gpio8.into_pull_up_input(),
-            f_pin: pins.gpio9.into_pull_up_input(),
-            fis_pin: pins.gpio10.into_pull_up_input(),
-            g_pin: pins.gpio11.into_pull_up_input(),
-            gis_pin: pins.gpio19.into_pull_up_input(),
-            a_pin: pins.gpio18.into_pull_up_input(),
-            ais_pin: pins.gpio17.into_pull_up_input(),
-            b_pin: pins.gpio16.into_pull_up_input(),
-            fn0_pin: pins.gpio3.into_pull_up_input(),
-            fn1_pin: pins.gpio2.into_pull_up_input(),
-            fn2_pin: pins.gpio1.into_pull_up_input(),
-            fn3_pin: pins.gpio0.into_pull_up_input(),
-        }
-    }
-
-    pub fn read(&self, id: KeyId) -> bool {
-        match id {
-            KeyId::NoteC => self.c_pin.is_low().unwrap(),
-            KeyId::NoteCis => self.cis_pin.is_low().unwrap(),
-            KeyId::NoteD => self.d_pin.is_low().unwrap(),
-            KeyId::NoteDis => self.dis_pin.is_low().unwrap(),
-            KeyId::NoteE => self.e_pin.is_low().unwrap(),
-            KeyId::NoteF => self.f_pin.is_low().unwrap(),
-            KeyId::NoteFis => self.fis_pin.is_low().unwrap(),
-            KeyId::NoteG => self.g_pin.is_low().unwrap(),
-            KeyId::NoteGis => self.gis_pin.is_low().unwrap(),
-            KeyId::NoteA => self.a_pin.is_low().unwrap(),
-            KeyId::NoteAis => self.ais_pin.is_low().unwrap(),
-            KeyId::NoteB => self.b_pin.is_low().unwrap(),
-            KeyId::Fn0 => self.fn0_pin.is_low().unwrap(),
-            KeyId::Fn1 => self.fn1_pin.is_low().unwrap(),
-            KeyId::Fn2 => self.fn2_pin.is_low().unwrap(),
-            KeyId::Fn3 => self.fn3_pin.is_low().unwrap(),
-        }
-    }
-}
-
-pub struct Clavier {
-    pub keys: ClavierKeys,
+pub struct Clavier<CLAVIER> {
+    pub keys: CLAVIER,
     pub debouncers: [Debouncer; 16],
     last_note_events: Vec<NoteEvent, 4>,
     last_notes_state: [bool; 12],
@@ -126,10 +63,10 @@ pub struct Clavier {
 
 const DEBOUNCE_TIME: u32 = 10;
 
-impl Clavier {
-    pub fn new(pins: rp_pico::Pins) -> Self {
+impl<CLAVIER: ClavierPins> Clavier<CLAVIER> {
+    pub fn new(keys: CLAVIER) -> Self {
         Self {
-            keys: ClavierKeys::new(pins),
+            keys,
             debouncers: [Debouncer::new(DEBOUNCE_TIME); 16],
             last_notes_state: [false; 12],
             last_note_events: Vec::new(),

@@ -1,6 +1,8 @@
 #![no_std]
 #![no_main]
 
+pub mod io;
+
 #[link_section = ".boot2"]
 #[no_mangle]
 #[used]
@@ -10,7 +12,6 @@ use cortex_m::singleton;
 #[allow(unused_imports)]
 use defmt::{error, info, warn};
 use defmt_rtt as _;
-use fixed::types::I1F15;
 use fugit::HertzU32;
 use panic_probe as _;
 use pio_proc::pio_file;
@@ -31,28 +32,9 @@ use rp_pico::{
 };
 
 use common::consts::*;
-use rytmos_synth::{
-    commands::Command,
-    effect::{
-        linear_decay::{LinearDecay, LinearDecaySettings},
-        lpf::{LowPassFilter, LowPassFilterSettings},
-    },
-    synth::{
-        composed::{
-            polyphonic::PolyphonicSynth,
-            synth_with_effects::{SynthWithEffect, SynthWithEffectSettings},
-        },
-        sine::{SineSynth, SineSynthSettings},
-        Synth,
-    },
-};
+use rytmos_synth::{commands::Command, synth::Synth};
 
-use polypicophonic::{
-    clavier::{Clavier, KeyId},
-    interface::{
-        chordloops::ChordLoopInterface, sandbox::SandboxInterface, Interface, PicoPianoHardware,
-    },
-};
+use polypicophonic::interface::{chordloops::ChordLoopInterface, Interface};
 
 static mut CORE1_STACK: Stack<4096> = Stack::new();
 
@@ -116,24 +98,7 @@ fn synth_core(sys_freq: u32) -> ! {
 
     info!("Start Synth core.");
 
-    type WaveSynth = SineSynth;
-    type Synth = SynthWithEffect<SynthWithEffect<WaveSynth, LinearDecay>, LowPassFilter>;
-
-    let settings =
-        SynthWithEffectSettings::<SynthWithEffect<WaveSynth, LinearDecay>, LowPassFilter> {
-            synth: SynthWithEffectSettings::<WaveSynth, LinearDecay> {
-                synth: SineSynthSettings::default(),
-                effect: LinearDecaySettings {
-                    decay: I1F15::from_num(0.0005),
-                    decay_every: 32,
-                },
-            },
-            effect: LowPassFilterSettings {
-                alpha: I1F15::from_num(0.05),
-            },
-        };
-
-    let mut synth = PolyphonicSynth::<4, Synth>::make(0, settings);
+    let mut synth = polypicophonic::synth!();
 
     let mut sample = 0i16;
 
@@ -265,18 +230,8 @@ fn main() -> ! {
         synth_core(sys_freq)
     });
 
-    let hw = PicoPianoHardware {
-        fifo: sio.fifo,
-        clavier: Clavier::new(pins),
-    };
+    let io = polypicophonic::io::IO::new(io::SioFifo(sio.fifo), io::Rp2040Clavier::new(pins));
 
-    if hw.clavier.debouncer_is_high(KeyId::NoteC) {
-        info!("Start chord loop interface.");
-        let interface = ChordLoopInterface::new(hw);
-        interface.start();
-    } else {
-        info!("Start sandbox interface.");
-        let interface = SandboxInterface::new(hw);
-        interface.start();
-    }
+    let interface = ChordLoopInterface::new(io);
+    interface.start(); // TODO: make sure inside this call it's decided which interface to start
 }

@@ -7,16 +7,18 @@ use rytmos_synth::commands::{Command, CommandMessage};
 
 use crate::{
     chords::{self, ChordConstruction, ChordQuality},
-    clavier::{KeyId, NoteEvent},
+    clavier::{Clavier, KeyId, NoteEvent},
+    io::{self, IO},
 };
 
-use super::{Interface, PicoPianoHardware};
+use super::Interface;
 
 const CHORDS_PER_LOOP: usize = 4;
 const CONSTRUCTION: ChordConstruction = ChordConstruction::InvertToWithinOctave;
 
-pub struct ChordLoopInterface {
-    hw: PicoPianoHardware,
+pub struct ChordLoopInterface<FIFO, CLAVIER> {
+    fifo: FIFO,
+    clavier: Clavier<CLAVIER>,
     state: State,
     settings: ChordLoopSettings,
     chords: Vec<Chord, CHORDS_PER_LOOP>,
@@ -49,10 +51,11 @@ enum DrumTrack {
     SimpleEights,
 }
 
-impl ChordLoopInterface {
-    pub fn new(hw: PicoPianoHardware) -> Self {
+impl<FIFO: io::Fifo, CLAVIER: io::ClavierPins> ChordLoopInterface<FIFO, CLAVIER> {
+    pub fn new(io: IO<FIFO, CLAVIER>) -> Self {
         Self {
-            hw,
+            fifo: io.fifo,
+            clavier: Clavier::new(io.clavier),
             chords: Vec::new(),
             state: State::AwaitChords,
             settings: ChordLoopSettings {
@@ -69,12 +72,12 @@ impl ChordLoopInterface {
     /// While awaiting chords, it is only possible to input chords.
     /// Hold FN1 for major and FN3 for minor, then press the root note's key.
     fn await_chords(&mut self, messages: &mut Vec<CommandMessage, 4>) {
-        if self.hw.clavier.debouncer_is_high(KeyId::Fn1) {
+        if self.clavier.debouncer_is_high(KeyId::Fn1) {
             chords::add_chord(messages, ChordQuality::Major, CONSTRUCTION);
             chords::root_to_bass_register(messages);
         }
 
-        if self.hw.clavier.debouncer_is_high(KeyId::Fn3) {
+        if self.clavier.debouncer_is_high(KeyId::Fn3) {
             chords::add_chord(messages, ChordQuality::Minor, CONSTRUCTION);
             chords::root_to_bass_register(messages);
         }
@@ -112,7 +115,7 @@ impl ChordLoopInterface {
         const TEMPO_MODIFIER: f32 = 1.1;
         const ATTACK_DIFF: U4F4 = U4F4::unwrapped_from_str("0.25");
 
-        let c = &self.hw.clavier;
+        let c = &self.clavier;
         if c.debouncer_is_high(KeyId::Fn1) {
             if c.debouncer_is_high(KeyId::NoteC) {
                 self.settings.loops_per_chord *= TEMPO_MODIFIER;
@@ -146,7 +149,6 @@ impl ChordLoopInterface {
             }
 
             if self
-                .hw
                 .clavier
                 .note_events()
                 .contains(&NoteEvent::NoteUp(KeyId::NoteB))
@@ -186,23 +188,23 @@ impl ChordLoopInterface {
     }
 }
 
-impl Interface for ChordLoopInterface {
+impl<FIFO: io::Fifo, CLAVIER: io::ClavierPins> Interface for ChordLoopInterface<FIFO, CLAVIER> {
     fn start(mut self) -> ! {
         loop {
-            self.hw.clavier.update_debouncers();
-            self.hw.clavier.update_note_events();
+            self.clavier.update_debouncers();
+            self.clavier.update_note_events();
 
-            if self.hw.clavier.debouncer_is_high(KeyId::Fn0) {
+            if self.clavier.debouncer_is_high(KeyId::Fn0) {
                 self.settings.octave = 5
-            } else if self.hw.clavier.debouncer_is_high(KeyId::Fn2) {
+            } else if self.clavier.debouncer_is_high(KeyId::Fn2) {
                 self.settings.octave = 3
             } else {
                 self.settings.octave = 4
             }
 
             // If the FN1 key is pressed, ignore notes since the note keys are used as settings
-            let events = if !self.hw.clavier.debouncer_is_high(KeyId::Fn1) {
-                self.hw.clavier.note_events()
+            let events = if !self.clavier.debouncer_is_high(KeyId::Fn1) {
+                self.clavier.note_events()
             } else {
                 &[]
             };
@@ -230,7 +232,7 @@ impl Interface for ChordLoopInterface {
                 };
                 let command_serialized = command.serialize();
 
-                self.hw.fifo.write(command_serialized);
+                self.fifo.write(command_serialized);
             }
 
             self.loops += 1.0;

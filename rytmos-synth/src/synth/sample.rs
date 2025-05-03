@@ -1,9 +1,6 @@
 use core::marker::PhantomData;
 
-use fixed::{
-    traits::Fixed,
-    types::{I1F15, U4F4},
-};
+use fixed::types::{I1F15, U4F4};
 use rytmos_engrave::staff::Note;
 
 use crate::commands::Command;
