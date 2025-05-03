@@ -1,0 +1,22 @@
+[package]
+name = "practice_bass"
+version = "0.1.0"
+edition = "2021"
+description = "."
+
+[dependencies]
+cortex-m = "0.7"
+cortex-m-rt = "0.7"
+embedded-hal = { version = "0.2.7", features = ["unproven"] }
+log = "0.4.22"
+defmt = "0.3.5"
+defmt-rtt = "0.4"
+panic-probe = { version = "0.3", features = ["print-defmt"] }
+fugit = "0.3.7"
+usbd-midi = "0.5"
+usb-device = { version = "0.3.2", features = ["log", "defmt"] }
+common = { version = "0.1.0", path = "../common" }
+rp235x-hal = "0.3.0"
+
+[features]
+benchmark = []
