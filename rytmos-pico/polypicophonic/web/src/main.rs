@@ -18,10 +18,9 @@ use polypicophonic::{
 use polypicophonic_web::io::{WebFifo, WebKeys};
 use wasm_bindgen_futures::JsFuture;
 use web_sys::js_sys::Array;
-use web_sys::wasm_bindgen::{JsCast, JsValue};
+use web_sys::wasm_bindgen::JsCast;
 use web_sys::{
-    window, AudioContext, AudioWorkletNode, AudioWorkletNodeOptions, OscillatorType, Request,
-    RequestInit, Response,
+    window, AudioContext, AudioWorkletNode, AudioWorkletNodeOptions, Request, RequestInit, Response,
 };
 
 fn keyboard_to_clavier(code: Code) -> Option<KeyId> {
@@ -40,8 +39,8 @@ fn keyboard_to_clavier(code: Code) -> Option<KeyId> {
         Code::KeyM => Some(KeyId::NoteB),
         Code::KeyL => Some(KeyId::Fn0),
         Code::Semicolon => Some(KeyId::Fn1),
-        Code::Period => Some(KeyId::Fn2),
-        Code::Slash => Some(KeyId::Fn3),
+        Code::Comma => Some(KeyId::Fn2),
+        Code::Period => Some(KeyId::Fn3),
         _ => None,
     }
 }
@@ -145,22 +144,86 @@ fn app() -> Element {
             onkeyup: update_key_signals_up,
 
             document::Link { href: asset!("/assets/stylesheet.css"), rel: "stylesheet" }
-            h1 {
-                "C: {key_signals[0]}"
-            }
+            div {
+                class: "header",
+                h1 {
+                    "Pico Piano"
+                }
 
-            for (mut key, name) in key_signals.clone().into_iter().zip(keynames) {
                 button {
-                    onmousedown: move |_| key.set(true),
-                    onmouseup: move |_| key.set(false),
-                    onmouseleave: move |_| key.set(false),
-                    "{name:?}"
+                    class: "start-button",
+                    onclick: move |_| play_audio(),
+                    "Start Audio Engine"
                 }
             }
 
+            // for (key, name) in key_signals.clone().into_iter().zip(keynames) {
+            //     {pico_piano_button(key, name)}
+            // }
+
+            div {
+                class: "all-buttons",
+                div {
+                    div {
+                        class: "button-container keys",
+                        div { class: "half-offset transparent" }
+                        {pico_piano_button(key_signals[1], keynames[1], "key")}
+                        {pico_piano_button(key_signals[3], keynames[3], "key")}
+                        div { class: "key transparent" }
+                        {pico_piano_button(key_signals[6], keynames[6], "key")}
+                        {pico_piano_button(key_signals[8], keynames[8], "key")}
+                        {pico_piano_button(key_signals[10], keynames[10], "key")}
+                    }
+
+                    div {
+                        class: "button-container keys",
+                        {pico_piano_button(key_signals[0], keynames[0], "key")}
+                        {pico_piano_button(key_signals[2], keynames[2], "key")}
+                        {pico_piano_button(key_signals[4], keynames[4], "key")}
+                        {pico_piano_button(key_signals[5], keynames[5], "key")}
+                        {pico_piano_button(key_signals[7], keynames[7], "key")}
+                        {pico_piano_button(key_signals[9], keynames[9], "key")}
+                        {pico_piano_button(key_signals[11], keynames[11], "key")}
+                    }
+                }
+
+                div {
+                    class: "all-fns",
+                    div {
+                        class: "button-container fns",
+                        div { class: "fn-offset" }
+                        {pico_piano_button(key_signals[12], keynames[12], "fn")}
+                        {pico_piano_button(key_signals[13], keynames[13], "fn")}
+                    }
+
+                    div {
+                        class: "button-container fns",
+                        {pico_piano_button(key_signals[14], keynames[14], "fn")}
+                        {pico_piano_button(key_signals[15], keynames[15], "fn")}
+                    }
+                }
+            }
+
+        }
+    }
+}
+
+fn pico_piano_button(mut key: Signal<bool>, key_id: KeyId, class: &str) -> Element {
+    let div_class = if class == "fn" { "fn-background" } else { "" };
+    let active_class = if *key.read() {
+        &format!("{class}-active")
+    } else {
+        ""
+    };
+    rsx! {
+        div {
+            class: div_class,
             button {
-                onclick: move |_| play_audio(),
-                "start"
+                class: "{class} {active_class}",
+                onmousedown: move |_| key.set(true),
+                onmouseup: move |_| key.set(false),
+                onmouseleave: move |_| key.set(false),
+                ""
             }
         }
     }
