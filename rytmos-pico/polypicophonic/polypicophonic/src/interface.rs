@@ -8,5 +8,6 @@ pub mod chordloops;
 pub mod sandbox;
 
 pub trait Interface {
-    fn start(self) -> !;
+    /// Runs a single iteration of the loop-driven interface. Call this in a loop to drive the interface.
+    fn run(&mut self);
 }

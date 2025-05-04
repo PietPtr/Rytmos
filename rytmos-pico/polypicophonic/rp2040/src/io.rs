@@ -1,12 +1,12 @@
 use embedded_hal::digital::v2::InputPin;
-use rp_pico::hal::gpio::{bank0::*, FunctionSioInput, Pin, PullUp};
+use rp2040_hal::gpio::{bank0::*, FunctionSioInput, Pin, PullUp};
 
 use polypicophonic::{
     clavier::KeyId,
     io::{ClavierPins, Fifo},
 };
 
-pub struct SioFifo(pub rp_pico::hal::sio::SioFifo);
+pub struct SioFifo(pub rp2040_hal::sio::SioFifo);
 
 impl Fifo for SioFifo {
     fn write(&mut self, value: u32) {
@@ -34,7 +34,7 @@ pub struct Rp2040Clavier {
 }
 
 impl Rp2040Clavier {
-    pub fn new(pins: rp_pico::Pins) -> Self {
+    pub fn new(pins: Pins) -> Self {
         Self {
             c_pin: pins.gpio4.into_pull_up_input(),
             cis_pin: pins.gpio5.into_pull_up_input(),

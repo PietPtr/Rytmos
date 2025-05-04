@@ -1,4 +1,3 @@
-use defmt::error;
 use fixed::types::U4F4;
 use heapless::Vec;
 
@@ -82,13 +81,12 @@ impl<CLAVIER: ClavierPins> Clavier<CLAVIER> {
 
     pub fn debouncer_is_high(&self, key: KeyId) -> bool {
         let key = key as usize;
-        self.debouncers
-            .get(key)
-            .and_then(|debouncer| debouncer.is_high().ok())
-            .unwrap_or_else(|| {
-                error!("No debouncer for key ID: {}", key);
-                false
-            })
+        let Some(debouncer) = self.debouncers.get(key) else {
+            log::error!("No debouncer found for KeyID {}.", key);
+            return false;
+        };
+
+        debouncer.is_high().unwrap_or(false)
     }
 
     pub fn note_events(&self) -> &[NoteEvent] {

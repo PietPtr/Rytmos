@@ -189,53 +189,51 @@ impl<FIFO: io::Fifo, CLAVIER: io::ClavierPins> ChordLoopInterface<FIFO, CLAVIER>
 }
 
 impl<FIFO: io::Fifo, CLAVIER: io::ClavierPins> Interface for ChordLoopInterface<FIFO, CLAVIER> {
-    fn start(mut self) -> ! {
-        loop {
-            self.clavier.update_debouncers();
-            self.clavier.update_note_events();
+    fn run(&mut self) {
+        self.clavier.update_debouncers();
+        self.clavier.update_note_events();
 
-            if self.clavier.debouncer_is_high(KeyId::Fn0) {
-                self.settings.octave = 5
-            } else if self.clavier.debouncer_is_high(KeyId::Fn2) {
-                self.settings.octave = 3
-            } else {
-                self.settings.octave = 4
-            }
-
-            // If the FN1 key is pressed, ignore notes since the note keys are used as settings
-            let events = if !self.clavier.debouncer_is_high(KeyId::Fn1) {
-                self.clavier.note_events()
-            } else {
-                &[]
-            };
-
-            let mut messages = events
-                .iter()
-                .filter_map(|event| {
-                    Some(CommandMessage::Play(
-                        event.note(self.settings.octave)?,
-                        event.velocity(self.settings.melody_attack),
-                    ))
-                })
-                .collect::<Vec<_, 4>>();
-
-            match self.state {
-                State::AwaitChords => self.await_chords(&mut messages),
-                State::Playing { current_chord } => self.playing(current_chord, &mut messages),
-                State::Paused => self.paused(),
-            }
-
-            for message in messages {
-                let command = Command {
-                    address: 0x0,
-                    message,
-                };
-                let command_serialized = command.serialize();
-
-                self.fifo.write(command_serialized);
-            }
-
-            self.loops += 1.0;
+        if self.clavier.debouncer_is_high(KeyId::Fn0) {
+            self.settings.octave = 5
+        } else if self.clavier.debouncer_is_high(KeyId::Fn2) {
+            self.settings.octave = 3
+        } else {
+            self.settings.octave = 4
         }
+
+        // If the FN1 key is pressed, ignore notes since the note keys are used as settings
+        let events = if !self.clavier.debouncer_is_high(KeyId::Fn1) {
+            self.clavier.note_events()
+        } else {
+            &[]
+        };
+
+        let mut messages = events
+            .iter()
+            .filter_map(|event| {
+                Some(CommandMessage::Play(
+                    event.note(self.settings.octave)?,
+                    event.velocity(self.settings.melody_attack),
+                ))
+            })
+            .collect::<Vec<_, 4>>();
+
+        match self.state {
+            State::AwaitChords => self.await_chords(&mut messages),
+            State::Playing { current_chord } => self.playing(current_chord, &mut messages),
+            State::Paused => self.paused(),
+        }
+
+        for message in messages {
+            let command = Command {
+                address: 0x0,
+                message,
+            };
+            let command_serialized = command.serialize();
+
+            self.fifo.write(command_serialized);
+        }
+
+        self.loops += 1.0;
     }
 }

@@ -8,8 +8,9 @@ publish = false
 reqwest = "0.12.15"
 serde = "1.0.219"
 dioxus = { version = "0.6.3", features = ["fullstack"] }
-polypicophonic = { path = "../polypicophonic" }
+polypicophonic = { path = "../polypicophonic", features = ["std"] }
 tracing = "0.1.41"
+async-std = "1.13.1"
 
 [features]
 default = []
