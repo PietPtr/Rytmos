@@ -17,7 +17,12 @@ use polypicophonic::{
 };
 use polypicophonic_web::io::{WebFifo, WebKeys};
 use wasm_bindgen_futures::JsFuture;
-use web_sys::{AudioContext, AudioWorkletNode, OscillatorType};
+use web_sys::js_sys::Array;
+use web_sys::wasm_bindgen::JsCast;
+use web_sys::{
+    window, AudioContext, AudioWorkletNode, AudioWorkletNodeOptions, OscillatorType, Request,
+    RequestInit, Response,
+};
 
 fn keyboard_to_clavier(code: Code) -> Option<KeyId> {
     match code {
@@ -96,13 +101,34 @@ fn app() -> Element {
         JsFuture::from(
             ctx.audio_worklet()
                 .unwrap()
-                .add_module(&String::from(asset!("/assets/wasm_audio.js")))
+                .add_module(&asset!("/assets/wasm_audio.js").to_string())
                 .unwrap(),
         )
         .await
         .unwrap();
 
-        let my_node = AudioWorkletNode::new(&ctx, "my-processor").unwrap();
+        let options = RequestInit::new();
+        options.set_method("GET");
+        let request = Request::new_with_str_and_init(
+            &asset!("/assets/wasm_audio_bg.wasm").to_string(),
+            &options,
+        )
+        .unwrap();
+
+        let window = window().unwrap();
+        let response = JsFuture::from(window.fetch_with_request(&request))
+            .await
+            .unwrap()
+            .unchecked_into::<Response>();
+
+        let array_buffer = JsFuture::from(response.array_buffer().unwrap())
+            .await
+            .unwrap();
+
+        let options = AudioWorkletNodeOptions::new();
+        options.set_processor_options(Some(&Array::of1(&array_buffer)));
+
+        let my_node = AudioWorkletNode::new_with_options(&ctx, "my-processor", &options).unwrap();
         my_node.connect_with_audio_node(&ctx.destination()).unwrap();
 
         ctx_signal.set(Some(ctx));

@@ -1,17 +1,21 @@
-
-
 class MyProcessor extends AudioWorkletProcessor {
     constructor(options) {
         super();
+         
         console.log("hallo wat is hier gaande", options);
 
-        __wbg_init();
+        const [arrayBuffer] = options.processorOptions;
 
-        console.log("na initsync");
+        initSync(arrayBuffer);
+        console.log("na initsync", wasm);
+
+        audio_main()
     }
 
     process(inputs, outputs, parameters) {
-        // return this.processor.process(outputs[0][0]);
+        process(inputs, outputs, parameters);
+
+        return true;
     }
 }
 
