@@ -96,7 +96,7 @@ fn synth_core(sys_freq: u32) -> ! {
 
     info!("Start Synth core.");
 
-    let mut synth = polypicophonic::synth!();
+    let mut synth = polypicophonic::synth::create();
 
     let mut sample = 0i16;
 

@@ -18,7 +18,7 @@ use polypicophonic::{
 use polypicophonic_web::io::{WebFifo, WebKeys};
 use wasm_bindgen_futures::JsFuture;
 use web_sys::js_sys::Array;
-use web_sys::wasm_bindgen::JsCast;
+use web_sys::wasm_bindgen::{JsCast, JsValue};
 use web_sys::{
     window, AudioContext, AudioWorkletNode, AudioWorkletNodeOptions, OscillatorType, Request,
     RequestInit, Response,
@@ -47,6 +47,9 @@ fn keyboard_to_clavier(code: Code) -> Option<KeyId> {
 }
 
 fn app() -> Element {
+    let mut ctx_signal: Signal<Option<AudioContext>> = use_signal(|| None);
+    let mut node_signal: Signal<Option<AudioWorkletNode>> = use_signal(|| None);
+
     let keynames: Vec<KeyId> = (0..16)
         .map(|i| (KeyId::try_from(i).unwrap()))
         .collect::<Vec<_>>();
@@ -59,7 +62,7 @@ fn app() -> Element {
             let key_signals = key_signals.clone();
             async move {
                 let io = IO {
-                    fifo: WebFifo {},
+                    fifo: WebFifo::new(node_signal),
                     clavier: WebKeys::new(key_signals),
                 };
 
@@ -91,12 +94,8 @@ fn app() -> Element {
         }
     };
 
-    let mut ctx_signal: Signal<Option<AudioContext>> = use_signal(|| None);
-
     use_future(move || async move {
         let ctx = AudioContext::new().unwrap();
-
-        let synth = ctx.create_oscillator().unwrap();
 
         JsFuture::from(
             ctx.audio_worklet()
@@ -128,9 +127,10 @@ fn app() -> Element {
         let options = AudioWorkletNodeOptions::new();
         options.set_processor_options(Some(&Array::of1(&array_buffer)));
 
-        let my_node = AudioWorkletNode::new_with_options(&ctx, "my-processor", &options).unwrap();
-        my_node.connect_with_audio_node(&ctx.destination()).unwrap();
+        let node = AudioWorkletNode::new_with_options(&ctx, "my-processor", &options).unwrap();
+        node.connect_with_audio_node(&ctx.destination()).unwrap();
 
+        node_signal.set(Some(node));
         ctx_signal.set(Some(ctx));
     });
 
@@ -143,7 +143,6 @@ fn app() -> Element {
             tabindex: 0,
             onkeydown: update_key_signals_down, // TODO: attach to window
             onkeyup: update_key_signals_up,
-            onmousedown: move |_| tracing::info!("muis"),
 
             document::Link { href: asset!("/assets/stylesheet.css"), rel: "stylesheet" }
             h1 {

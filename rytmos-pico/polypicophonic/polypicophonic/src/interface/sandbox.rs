@@ -76,8 +76,6 @@ impl<FIFO: io::Fifo, CLAVIER: io::ClavierPins> Interface for SandboxInterface<FI
                 message,
             };
 
-            info!("{:#?}", command);
-
             let command_serialized = command.serialize();
 
             self.fifo.write(command_serialized);
