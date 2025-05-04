@@ -7,12 +7,36 @@ publish = false
 [dependencies]
 reqwest = "0.12.15"
 serde = "1.0.219"
-dioxus = { version = "0.6.3", features = ["fullstack"] }
+dioxus = { version = "0.6.3", features = ["web"] }
 polypicophonic = { path = "../polypicophonic", features = ["std"] }
 tracing = "0.1.41"
 async-std = "1.13.1"
+wasm-bindgen-futures = "0.4.50"
 
 [features]
 default = []
 server = ["dioxus/server"]
 web = ["dioxus/web"]
+
+[dependencies.web-sys]
+version = "0.3.77"
+features = [
+    "AudioContext",
+    "AudioDestinationNode",
+    "AudioWorklet",
+    "AudioWorkletNode",
+    "AudioWorkletNodeOptions",
+    "Blob",
+    "BlobPropertyBag",
+    "Document",
+    "Event",
+    "HtmlInputElement",
+    "HtmlLabelElement",
+    "Url",
+    "Window",
+    'AudioNode',
+    'AudioParam',
+    'GainNode',
+    'OscillatorNode',
+    'OscillatorType',
+]

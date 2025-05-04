@@ -5,18 +5,19 @@
 //! ```
 #![allow(non_snake_case)]
 
-pub mod io;
-
+use core::borrow::BorrowMut;
 use std::time::Duration;
 use std::{convert::TryFrom, iter::Iterator};
 
 use dioxus::prelude::*;
-use io::{WebFifo, WebKeys};
 use polypicophonic::{
     clavier::KeyId,
     interface::{sandbox::SandboxInterface, Interface},
     io::IO,
 };
+use polypicophonic_web::io::{WebFifo, WebKeys};
+use wasm_bindgen_futures::JsFuture;
+use web_sys::{AudioContext, AudioWorkletNode, OscillatorType};
 
 fn keyboard_to_clavier(code: Code) -> Option<KeyId> {
     match code {
@@ -46,23 +47,25 @@ fn app() -> Element {
         .collect::<Vec<_>>();
 
     let key_signals = (0..16).map(|_| use_signal(|| false)).collect::<Vec<_>>();
-    let key_signals_for_closure = key_signals.clone();
 
-    use_future(move || {
-        let key_signals_for_closure = key_signals_for_closure.clone();
-        async move {
-            let io = IO {
-                fifo: WebFifo {},
-                clavier: WebKeys::new(key_signals_for_closure),
-            };
+    use_future({
+        let key_signals = key_signals.clone();
+        move || {
+            let key_signals = key_signals.clone();
+            async move {
+                let io = IO {
+                    fifo: WebFifo {},
+                    clavier: WebKeys::new(key_signals),
+                };
 
-            let mut interface = SandboxInterface::new(io);
+                let mut interface = SandboxInterface::new(io);
 
-            loop {
-                // for _ in 0..10 {
-                interface.run();
+                loop {
+                    // for _ in 0..10 {
+                    interface.run();
 
-                async_std::task::sleep(Duration::from_millis(10)).await
+                    async_std::task::sleep(Duration::from_millis(10)).await
+                }
             }
         }
     });
@@ -83,10 +86,36 @@ fn app() -> Element {
         }
     };
 
+    let mut ctx_signal: Signal<Option<AudioContext>> = use_signal(|| None);
+
+    use_future(move || async move {
+        let ctx = AudioContext::new().unwrap();
+
+        let synth = ctx.create_oscillator().unwrap();
+
+        JsFuture::from(
+            ctx.audio_worklet()
+                .unwrap()
+                .add_module(&String::from(asset!("/assets/wasm_audio.js")))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+        let my_node = AudioWorkletNode::new(&ctx, "my-processor").unwrap();
+        my_node.connect_with_audio_node(&ctx.destination()).unwrap();
+
+        ctx_signal.set(Some(ctx));
+    });
+
+    let mut play_audio = move || {
+        drop(ctx_signal.borrow_mut().as_mut().unwrap().resume().unwrap());
+    };
+
     rsx! {
         div {
             tabindex: 0,
-            onkeydown: update_key_signals_down,
+            onkeydown: update_key_signals_down, // TODO: attach to window
             onkeyup: update_key_signals_up,
             onmousedown: move |_| tracing::info!("muis"),
 
@@ -104,6 +133,10 @@ fn app() -> Element {
                 }
             }
 
+            button {
+                onclick: move |_| play_audio(),
+                "start"
+            }
         }
     }
 }
