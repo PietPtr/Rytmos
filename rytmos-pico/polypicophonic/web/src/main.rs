@@ -47,6 +47,29 @@ fn keyboard_to_clavier_str(code: &str) -> Option<KeyId> {
     }
 }
 
+// TODO: has to be manually kept up to date with keyboard_to_clavier_str...
+fn key_id_to_keyboard_help(key_id: KeyId) -> String {
+    match key_id {
+        KeyId::NoteC => "Z",
+        KeyId::NoteCis => "S",
+        KeyId::NoteD => "X",
+        KeyId::NoteDis => "D",
+        KeyId::NoteE => "C",
+        KeyId::NoteF => "V",
+        KeyId::NoteFis => "G",
+        KeyId::NoteG => "B",
+        KeyId::NoteGis => "H",
+        KeyId::NoteA => "N",
+        KeyId::NoteAis => "J",
+        KeyId::NoteB => "M",
+        KeyId::Fn0 => "L",
+        KeyId::Fn1 => ";",
+        KeyId::Fn2 => ",",
+        KeyId::Fn3 => ".",
+    }
+    .to_string()
+}
+
 static ONCE: OnceLock<()> = OnceLock::new();
 
 fn app() -> Element {
@@ -125,16 +148,23 @@ fn app() -> Element {
         drop(ctx_signal.borrow_mut().as_mut().unwrap().resume().unwrap());
     };
 
+    let mut shift_signal = use_signal(|| false);
+
     ONCE.get_or_init({
         let key_signals = key_signals.clone();
         move || {
             let mut key_signals = key_signals.clone();
-            let mut key_signals_down = key_signals.clone();
+            let mut key_signals_up = key_signals.clone();
             let keydown_closure: Closure<dyn FnMut(web_sys::KeyboardEvent)> =
                 Closure::new(move |event: web_sys::KeyboardEvent| {
                     let key_id = keyboard_to_clavier_str(&event.code()).map(|id| id as usize);
                     if let Some(key_id) = key_id {
                         key_signals[key_id].set(true);
+                    }
+
+                    match event.code().as_str() {
+                        "ShiftLeft" | "ShiftRight" => shift_signal.set(true),
+                        _ => {}
                     }
                 });
 
@@ -142,7 +172,12 @@ fn app() -> Element {
                 Closure::new(move |event: web_sys::KeyboardEvent| {
                     let key_id = keyboard_to_clavier_str(&event.code()).map(|id| id as usize);
                     if let Some(key_id) = key_id {
-                        key_signals_down[key_id].set(false);
+                        key_signals_up[key_id].set(false);
+                    }
+
+                    match event.code().as_str() {
+                        "ShiftLeft" | "ShiftRight" => shift_signal.set(false),
+                        _ => {}
                     }
                 });
 
@@ -164,6 +199,7 @@ fn app() -> Element {
 
     rsx! {
         div {
+            class: "content",
             tabindex: 0,
 
             document::Link { href: asset!("/assets/stylesheet.css"), rel: "stylesheet" }
@@ -186,23 +222,23 @@ fn app() -> Element {
                     div {
                         class: "button-container keys",
                         div { class: "half-offset transparent" }
-                        {pico_piano_button(key_signals[1], keynames[1], "key")}
-                        {pico_piano_button(key_signals[3], keynames[3], "key")}
+                        {pico_piano_button(shift_signal, key_signals[1], keynames[1], "key")}
+                        {pico_piano_button(shift_signal, key_signals[3], keynames[3], "key")}
                         div { class: "key transparent" }
-                        {pico_piano_button(key_signals[6], keynames[6], "key")}
-                        {pico_piano_button(key_signals[8], keynames[8], "key")}
-                        {pico_piano_button(key_signals[10], keynames[10], "key")}
+                        {pico_piano_button(shift_signal, key_signals[6], keynames[6], "key")}
+                        {pico_piano_button(shift_signal, key_signals[8], keynames[8], "key")}
+                        {pico_piano_button(shift_signal, key_signals[10], keynames[10], "key")}
                     }
 
                     div {
                         class: "button-container keys",
-                        {pico_piano_button(key_signals[0], keynames[0], "key")}
-                        {pico_piano_button(key_signals[2], keynames[2], "key")}
-                        {pico_piano_button(key_signals[4], keynames[4], "key")}
-                        {pico_piano_button(key_signals[5], keynames[5], "key")}
-                        {pico_piano_button(key_signals[7], keynames[7], "key")}
-                        {pico_piano_button(key_signals[9], keynames[9], "key")}
-                        {pico_piano_button(key_signals[11], keynames[11], "key")}
+                        {pico_piano_button(shift_signal, key_signals[0], keynames[0], "key")}
+                        {pico_piano_button(shift_signal, key_signals[2], keynames[2], "key")}
+                        {pico_piano_button(shift_signal, key_signals[4], keynames[4], "key")}
+                        {pico_piano_button(shift_signal, key_signals[5], keynames[5], "key")}
+                        {pico_piano_button(shift_signal, key_signals[7], keynames[7], "key")}
+                        {pico_piano_button(shift_signal, key_signals[9], keynames[9], "key")}
+                        {pico_piano_button(shift_signal, key_signals[11], keynames[11], "key")}
                     }
                 }
 
@@ -211,26 +247,41 @@ fn app() -> Element {
                     div {
                         class: "button-container fns",
                         div { class: "fn-offset" }
-                        {pico_piano_button(key_signals[12], keynames[12], "fn")}
-                        {pico_piano_button(key_signals[13], keynames[13], "fn")}
+                        {pico_piano_button(shift_signal, key_signals[12], keynames[12], "fn")}
+                        {pico_piano_button(shift_signal, key_signals[13], keynames[13], "fn")}
                     }
 
                     div {
                         class: "button-container fns",
-                        {pico_piano_button(key_signals[14], keynames[14], "fn")}
-                        {pico_piano_button(key_signals[15], keynames[15], "fn")}
+                        {pico_piano_button(shift_signal, key_signals[14], keynames[14], "fn")}
+                        {pico_piano_button(shift_signal, key_signals[15], keynames[15], "fn")}
                     }
                 }
+
             }
 
+            p {
+                class: "helptext",
+                "(hold shift for hotkeys)"
+            }
         }
     }
 }
 
-fn pico_piano_button(mut key: Signal<bool>, key_id: KeyId, class: &str) -> Element {
+fn pico_piano_button(
+    shift_signal: Signal<bool>,
+    mut key: Signal<bool>,
+    key_id: KeyId,
+    class: &str,
+) -> Element {
     let div_class = if class == "fn" { "fn-background" } else { "" };
     let active_class = if *key.read() {
         &format!("{class}-active")
+    } else {
+        ""
+    };
+    let button_text = if *shift_signal.read() {
+        &key_id_to_keyboard_help(key_id)
     } else {
         ""
     };
@@ -238,11 +289,11 @@ fn pico_piano_button(mut key: Signal<bool>, key_id: KeyId, class: &str) -> Eleme
         div {
             class: div_class,
             button {
-                class: "{class} {active_class}",
+                class: "{class} {active_class} pico-button",
                 onmousedown: move |_| key.set(true),
                 onmouseup: move |_| key.set(false),
                 onmouseleave: move |_| key.set(false),
-                ""
+                "{button_text}"
             }
         }
     }

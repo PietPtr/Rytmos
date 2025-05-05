@@ -14,7 +14,7 @@ pub fn init_logging() {
     console_error_panic_hook::set_once();
     console_log::init_with_level(Level::Debug).unwrap();
 
-    log::info!("Initialized logging and panic handler.");
+    log::info!("Initialized synth logging and panic handler.");
 
     let synth = polypicophonic::synth::create();
 
@@ -34,11 +34,7 @@ pub struct Processor {
 impl Processor {
     #[wasm_bindgen(constructor)]
     pub fn new(port: MessagePort) -> Self {
-        log::info!("Creating Processor");
-
         let message_closure = Closure::new(|event: MessageEvent| {
-            log::info!("received {:?}", event.data());
-
             let mut synth = SYNTH.get().unwrap().lock().unwrap();
             let Some(serialized) = event.data().as_f64() else {
                 log::error!("Event data not convertible to f64: {:?}", event.data());
@@ -56,7 +52,7 @@ impl Processor {
         port.add_event_listener_with_callback("message", message_closure.as_ref().unchecked_ref())
             .unwrap();
 
-        log::info!("Created Processor");
+        log::info!("Created Synth");
 
         Self {
             _port: port,

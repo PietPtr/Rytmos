@@ -330,12 +330,12 @@ export class Processor {
         return this;
     }
     /**
-     * @param {Array<any>} inputs
+     * @param {Array<any>} _inputs
      * @param {Array<any>} outputs
      * @param {object} _parameters
      */
-    process(inputs, outputs, _parameters) {
-        wasm.processor_process(this.__wbg_ptr, inputs, outputs, _parameters);
+    process(_inputs, outputs, _parameters) {
+        wasm.processor_process(this.__wbg_ptr, _inputs, outputs, _parameters);
     }
 }
 
