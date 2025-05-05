@@ -6,6 +6,7 @@
 #![allow(non_snake_case)]
 
 use core::borrow::BorrowMut;
+use std::sync::OnceLock;
 use std::time::Duration;
 use std::{convert::TryFrom, iter::Iterator};
 
@@ -18,32 +19,35 @@ use polypicophonic::{
 use polypicophonic_web::io::{WebFifo, WebKeys};
 use wasm_bindgen_futures::JsFuture;
 use web_sys::js_sys::Array;
+use web_sys::wasm_bindgen::prelude::Closure;
 use web_sys::wasm_bindgen::JsCast;
 use web_sys::{
     window, AudioContext, AudioWorkletNode, AudioWorkletNodeOptions, Request, RequestInit, Response,
 };
 
-fn keyboard_to_clavier(code: Code) -> Option<KeyId> {
+fn keyboard_to_clavier_str(code: &str) -> Option<KeyId> {
     match code {
-        Code::KeyZ => Some(KeyId::NoteC),
-        Code::KeyS => Some(KeyId::NoteCis),
-        Code::KeyX => Some(KeyId::NoteD),
-        Code::KeyD => Some(KeyId::NoteDis),
-        Code::KeyC => Some(KeyId::NoteE),
-        Code::KeyV => Some(KeyId::NoteF),
-        Code::KeyG => Some(KeyId::NoteFis),
-        Code::KeyB => Some(KeyId::NoteG),
-        Code::KeyH => Some(KeyId::NoteGis),
-        Code::KeyN => Some(KeyId::NoteA),
-        Code::KeyJ => Some(KeyId::NoteAis),
-        Code::KeyM => Some(KeyId::NoteB),
-        Code::KeyL => Some(KeyId::Fn0),
-        Code::Semicolon => Some(KeyId::Fn1),
-        Code::Comma => Some(KeyId::Fn2),
-        Code::Period => Some(KeyId::Fn3),
+        "KeyZ" => Some(KeyId::NoteC),
+        "KeyS" => Some(KeyId::NoteCis),
+        "KeyX" => Some(KeyId::NoteD),
+        "KeyD" => Some(KeyId::NoteDis),
+        "KeyC" => Some(KeyId::NoteE),
+        "KeyV" => Some(KeyId::NoteF),
+        "KeyG" => Some(KeyId::NoteFis),
+        "KeyB" => Some(KeyId::NoteG),
+        "KeyH" => Some(KeyId::NoteGis),
+        "KeyN" => Some(KeyId::NoteA),
+        "KeyJ" => Some(KeyId::NoteAis),
+        "KeyM" => Some(KeyId::NoteB),
+        "KeyL" => Some(KeyId::Fn0),
+        "Semicolon" => Some(KeyId::Fn1),
+        "Comma" => Some(KeyId::Fn2),
+        "Period" => Some(KeyId::Fn3),
         _ => None,
     }
 }
+
+static ONCE: OnceLock<()> = OnceLock::new();
 
 fn app() -> Element {
     let mut ctx_signal: Signal<Option<AudioContext>> = use_signal(|| None);
@@ -76,22 +80,6 @@ fn app() -> Element {
             }
         }
     });
-
-    let mut key_signals_for_closure = key_signals.clone();
-    let update_key_signals_down = move |event: KeyboardEvent| {
-        let key_id = keyboard_to_clavier(event.data.code()).map(|id| id as usize);
-        if let Some(key_id) = key_id {
-            key_signals_for_closure[key_id].set(true);
-        }
-    };
-
-    let mut key_signals_for_closure = key_signals.clone();
-    let update_key_signals_up = move |event: KeyboardEvent| {
-        let key_id = keyboard_to_clavier(event.data.code()).map(|id| id as usize);
-        if let Some(key_id) = key_id {
-            key_signals_for_closure[key_id].set(false);
-        }
-    };
 
     use_future(move || async move {
         let ctx = AudioContext::new().unwrap();
@@ -137,11 +125,46 @@ fn app() -> Element {
         drop(ctx_signal.borrow_mut().as_mut().unwrap().resume().unwrap());
     };
 
+    ONCE.get_or_init({
+        let key_signals = key_signals.clone();
+        move || {
+            let mut key_signals = key_signals.clone();
+            let mut key_signals_down = key_signals.clone();
+            let keydown_closure: Closure<dyn FnMut(web_sys::KeyboardEvent)> =
+                Closure::new(move |event: web_sys::KeyboardEvent| {
+                    let key_id = keyboard_to_clavier_str(&event.code()).map(|id| id as usize);
+                    if let Some(key_id) = key_id {
+                        key_signals[key_id].set(true);
+                    }
+                });
+
+            let keyup_closure: Closure<dyn FnMut(web_sys::KeyboardEvent)> =
+                Closure::new(move |event: web_sys::KeyboardEvent| {
+                    let key_id = keyboard_to_clavier_str(&event.code()).map(|id| id as usize);
+                    if let Some(key_id) = key_id {
+                        key_signals_down[key_id].set(false);
+                    }
+                });
+
+            let window = window().unwrap();
+            window
+                .add_event_listener_with_callback(
+                    "keydown",
+                    keydown_closure.as_ref().unchecked_ref(),
+                )
+                .unwrap();
+            window
+                .add_event_listener_with_callback("keyup", keyup_closure.as_ref().unchecked_ref())
+                .unwrap();
+
+            keydown_closure.forget();
+            keyup_closure.forget();
+        }
+    });
+
     rsx! {
         div {
             tabindex: 0,
-            onkeydown: update_key_signals_down, // TODO: attach to window
-            onkeyup: update_key_signals_up,
 
             document::Link { href: asset!("/assets/stylesheet.css"), rel: "stylesheet" }
             div {
@@ -156,10 +179,6 @@ fn app() -> Element {
                     "Start Audio Engine"
                 }
             }
-
-            // for (key, name) in key_signals.clone().into_iter().zip(keynames) {
-            //     {pico_piano_button(key, name)}
-            // }
 
             div {
                 class: "all-buttons",

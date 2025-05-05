@@ -1,10 +1,8 @@
 use core::convert::{AsRef, Into};
 use std::sync::{Mutex, OnceLock};
 
-use fixed::types::U4F4;
 use js_sys::{Array, Float32Array, Object};
 use log::Level;
-use rytmos_engrave::a;
 use rytmos_synth::{commands::Command, synth::Synth};
 use wasm_bindgen::prelude::*;
 use web_sys::{MessageEvent, MessagePort};
@@ -27,10 +25,11 @@ pub fn init_logging() {
 
 #[wasm_bindgen]
 pub struct Processor {
-    port: MessagePort,
-    message_closure: Closure<dyn Fn(MessageEvent)>,
+    _port: MessagePort,
+    _message_closure: Closure<dyn Fn(MessageEvent)>,
 }
 
+// TODO: make generic over S: Synth?
 #[wasm_bindgen]
 impl Processor {
     #[wasm_bindgen(constructor)]
@@ -60,13 +59,13 @@ impl Processor {
         log::info!("Created Processor");
 
         Self {
-            port,
-            message_closure,
+            _port: port,
+            _message_closure: message_closure,
         }
     }
 
     #[wasm_bindgen]
-    pub fn process(&mut self, inputs: Array, outputs: Array, _parameters: Object) {
+    pub fn process(&mut self, _inputs: Array, outputs: Array, _parameters: Object) {
         let output = outputs.get(0).unchecked_into::<Array>();
         let channel = output.get(0).unchecked_into::<Float32Array>();
 

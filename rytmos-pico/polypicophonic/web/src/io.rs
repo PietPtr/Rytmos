@@ -2,7 +2,7 @@ use core::assert_eq;
 
 use dioxus::signals::{Readable, Signal};
 use polypicophonic::io;
-use web_sys::{wasm_bindgen::JsValue, AudioContext, AudioWorklet, AudioWorkletNode};
+use web_sys::{wasm_bindgen::JsValue, AudioWorkletNode};
 
 pub struct WebFifo {
     node: Signal<Option<AudioWorkletNode>>,
@@ -22,8 +22,6 @@ impl io::Fifo for WebFifo {
             .unwrap()
             .post_message(&JsValue::from_f64(value as f64))
             .unwrap();
-
-        tracing::info!("Sending command {value}");
     }
 }
 

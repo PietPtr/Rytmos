@@ -65,17 +65,13 @@ h1 {
     background-color: #fafafa;
     border: none;
     color: white;
-    width: 7.5vw;
+    width: 8.5vw;
     height: 13vw;
     display: block;
     font-size: 16px;
     margin: 2px;
     flex-shrink: 0;
     border-radius: 0.8vw;
-}
-
-.key:active {
-    background-color: #f0f0f0;
 }
 
 .key-active {
@@ -95,17 +91,13 @@ h1 {
     background-color: rgb(210, 0, 0);
     border: none;
     color: white;
-    width: 8vw;
-    height: 8vw;
-    margin-left: 1vw;
+    width: 7vw;
+    height: 7vw;
     display: block;
     font-size: 16px;
     flex-shrink: 0;
     border-radius: 100%;
-}
-
-.fn:active {
-    background-color: rgb(190, 0, 0);
+    align-self: center;
 }
 
 .fn-active {
@@ -114,11 +106,11 @@ h1 {
 
 .fn-background {
     background-color: #191a19;
-    width: 10vw;
-    height: 10vw;
+    width: 8.5vw;
+    height: 8.5vw;
     margin-top: 1.0vw;
     margin-bottom: 0.0vw;
-    margin-left: 1.2vw;
+    margin-left: 4px;
     display: block;
     font-size: 16px;
     flex-shrink: 0;
@@ -134,5 +126,9 @@ h1 {
 }
 
 .all-fns {
-    margin-top: 4vw;
+    /* margin-top: 5vw; */
+    /* justify-content: end; */
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
 }
