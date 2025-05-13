@@ -1,0 +1,8 @@
+[application]
+
+[web.app]
+base_path = "pico_piano"
+title = "Pico Piano"
+
+[bundle]
+icon = ["assets/icon.png"]

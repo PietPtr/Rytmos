@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400..800;1,400..800&family=Fira+Sans:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
+
 body {
     background-color: #525753;
 }
@@ -8,9 +10,15 @@ body {
 }
 
 h1 {
-    font-family: 'Courier New', Courier, monospace;
-    padding: 0.5vw;
+    font-family: "Fira Sans", Arial, NanumBarunGothic, sans-serif;
     margin-left: 2vw;
+    margin-bottom: 0.5vw;
+    margin-top: 0.8vw;
+    font-size: 4vw;
+}
+
+p {
+    font-size: 1.5vw;
 }
 
 div {
@@ -30,7 +38,7 @@ div {
 }
 
 .helptext {
-    font-family: 'Courier New', Courier, monospace;
+    font-family: "Fira Sans", Arial, NanumBarunGothic, sans-serif;
     color: #777d79;
     margin-top: 4vw;
 }
@@ -39,10 +47,10 @@ div {
     background-color: #fafafa;
     border: 1px solid rgb(219, 219, 219);
     color: black;
-    font-family: 'Courier New', Courier, monospace;
-    width: 7.5vw;
+    font-family: "Fira Sans", Arial, NanumBarunGothic, sans-serif;
+    width: 10vw;
     display: block;
-    font-size: 16px;
+    font-size: 1.5vw;
     margin: 0.5vw;
     flex-shrink: 0;
     border-radius: 0.8vw;
@@ -90,8 +98,8 @@ div {
 
 .pico-button {
     font-weight: bold;
-    font-family: 'Courier New', Courier, monospace;
-    font-size: 20pt;
+    font-family: "Fira Sans", Arial, NanumBarunGothic, sans-serif;
+    font-size: 3vw;
 }
 
 .key {

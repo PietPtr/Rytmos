@@ -144,8 +144,14 @@ fn app() -> Element {
         ctx_signal.set(Some(ctx));
     });
 
-    let mut play_audio = move || {
-        drop(ctx_signal.borrow_mut().as_mut().unwrap().resume().unwrap());
+    let mut is_audio_initialized = use_signal(|| false);
+
+    let mut initialize_audio = move || {
+        if !is_audio_initialized() {
+            drop(ctx_signal.borrow_mut().as_mut().unwrap().resume().unwrap());
+        }
+
+        is_audio_initialized.set(true);
     };
 
     let mut shift_signal = use_signal(|| false);
@@ -157,6 +163,14 @@ fn app() -> Element {
             let mut key_signals_up = key_signals.clone();
             let keydown_closure: Closure<dyn FnMut(web_sys::KeyboardEvent)> =
                 Closure::new(move |event: web_sys::KeyboardEvent| {
+                    if !event.shift_key()
+                        && !event.ctrl_key()
+                        && !event.alt_key()
+                        && !event.meta_key()
+                    {
+                        initialize_audio();
+                    }
+
                     let key_id = keyboard_to_clavier_str(&event.code()).map(|id| id as usize);
                     if let Some(key_id) = key_id {
                         key_signals[key_id].set(true);
@@ -181,6 +195,11 @@ fn app() -> Element {
                     }
                 });
 
+            let mousedown_closure: Closure<dyn FnMut(web_sys::MouseEvent)> =
+                Closure::new(move |_| {
+                    initialize_audio();
+                });
+
             let window = window().unwrap();
             window
                 .add_event_listener_with_callback(
@@ -189,11 +208,18 @@ fn app() -> Element {
                 )
                 .unwrap();
             window
+                .add_event_listener_with_callback(
+                    "mousedown",
+                    mousedown_closure.as_ref().unchecked_ref(),
+                )
+                .unwrap();
+            window
                 .add_event_listener_with_callback("keyup", keyup_closure.as_ref().unchecked_ref())
                 .unwrap();
 
             keydown_closure.forget();
             keyup_closure.forget();
+            mousedown_closure.forget();
         }
     });
 
@@ -203,16 +229,21 @@ fn app() -> Element {
             tabindex: 0,
 
             document::Link { href: asset!("/assets/stylesheet.css"), rel: "stylesheet" }
+            document::Link { rel: "icon", type: "image/png", href: asset!("/assets/icon.png") }
+            document::Title { "Pico Piano" }
+
             div {
                 class: "header",
                 h1 {
                     "Pico Piano"
                 }
 
-                button {
-                    class: "start-button",
-                    onclick: move |_| play_audio(),
-                    "Start Audio Engine"
+                if !is_audio_initialized() {
+                    button {
+                        class: "start-button",
+                        onclick: move |_| initialize_audio(),
+                        "Start Audio Engine"
+                    }
                 }
             }
 
@@ -275,12 +306,12 @@ fn pico_piano_button(
     class: &str,
 ) -> Element {
     let div_class = if class == "fn" { "fn-background" } else { "" };
-    let active_class = if *key.read() {
+    let active_class = if key() {
         &format!("{class}-active")
     } else {
         ""
     };
-    let button_text = if *shift_signal.read() {
+    let button_text = if shift_signal() {
         &key_id_to_keyboard_help(key_id)
     } else {
         ""
@@ -291,7 +322,9 @@ fn pico_piano_button(
             button {
                 class: "{class} {active_class} pico-button",
                 onmousedown: move |_| key.set(true),
+                ontouchstart: move |_| key.set(true),
                 onmouseup: move |_| key.set(false),
+                ontouchend: move |_| key.set(false),
                 onmouseleave: move |_| key.set(false),
                 "{button_text}"
             }
