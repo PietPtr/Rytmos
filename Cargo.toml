@@ -14,6 +14,7 @@ members = [
     "rytmos-pico/polypicophonic/*",
     # "rytmos-pico/practice_bass",
     # "rytmos-pico/rytmos_zero",
+    "wasm-audio",
     "bsps/*",
     "sim",
     "demo",

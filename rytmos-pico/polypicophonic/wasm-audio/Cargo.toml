@@ -1,5 +1,5 @@
 [package]
-name = "wasm-audio"
+name = "wasm-audio-ppp"
 version = "0.1.0"
 edition = "2024"
 

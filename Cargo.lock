@@ -5089,6 +5089,10 @@ dependencies = [
 [[package]]
 name = "wasm-audio"
 version = "0.1.0"
+
+[[package]]
+name = "wasm-audio-ppp"
+version = "0.1.0"
 dependencies = [
  "console_error_panic_hook",
  "console_log",
