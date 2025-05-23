@@ -1,4 +1,4 @@
-use fixed::types::{I1F15, U4F4};
+use fixed::types::{I1F15, U12F4, U4F4};
 use rytmos_engrave::staff::Note;
 
 use crate::commands::{Command, CommandMessage};
@@ -23,7 +23,13 @@ pub trait Synth {
     where
         Self: Sized;
     fn configure(&mut self, settings: Self::Settings);
+    /// Synth should play the given note at given velocity
     fn play(&mut self, note: Note, velocity: U4F4);
+    /// Synth should start to reconfigure to emit the given frequency amplified by the
+    /// given velocity.
+    fn freq(&mut self, freq: U12F4);
+    /// Change the attack that the synth is using. Can be interpreted to result in a timbre change as well.
+    fn attack(&mut self, attack: U4F4);
     fn next(&mut self) -> I1F15;
     fn run_command(&mut self, command: Command);
     fn address(&self) -> u32;

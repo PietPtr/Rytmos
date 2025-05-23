@@ -49,7 +49,7 @@ impl Synth for MetronomeSynth {
         self.sample = 0
     }
 
-    // This cannot be synced to anything. Change it such that play actually plays the sample and decides on emphasis based on note.
+    // TODO: This cannot be synced to anything. Change it such that play actually plays the sample and decides on emphasis based on note.
     fn next(&mut self) -> I1F15 {
         self.strong_synth
             .next()
@@ -62,5 +62,12 @@ impl Synth for MetronomeSynth {
 
     fn address(&self) -> u32 {
         self.address
+    }
+
+    fn freq(&mut self, freq: fixed::types::U12F4) {}
+
+    // TODO: attack VS velocity naming convention?
+    fn attack(&mut self, attack: U4F4) {
+        self.velocity = attack
     }
 }

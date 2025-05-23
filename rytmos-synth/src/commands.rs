@@ -1,4 +1,4 @@
-use fixed::types::U4F4; // TODO: maybe larger attack type? (U8F8 encoded with 12 bits, throwing away 4 F-bits?)
+use fixed::types::{U12F4, U4F4};
 use rytmos_engrave::staff::{Accidental, Note};
 
 /// Commands for synths that can be serialized in a u32 so the fit in a Pico's FIFO.
@@ -6,6 +6,8 @@ use rytmos_engrave::staff::{Accidental, Note};
 pub enum CommandMessage {
     /// Note and velocity
     Play(Note, U4F4),
+    /// Frequency and velocity. Drops two MSB's of attack in favor of frequency accuracy
+    Frequency(U12F4, U4F4),
     /// Define default attack?
     SetAttack(U4F4),
     /// Play the tick of a metronome, with emphasis or not
@@ -33,6 +35,14 @@ impl defmt::Format for Command {
                     note,
                     velocity.to_num::<f32>()
                 );
+            }
+            CommandMessage::Frequency(freq, velocity) => {
+                defmt::write!(
+                    fmt,
+                    "Frequency(Frequency: {:?}, Velocity: {:?})",
+                    freq.to_num::<f32>(),
+                    velocity.to_num::<f32>()
+                )
             }
             CommandMessage::SetAttack(attack) => {
                 defmt::write!(fmt, "SetAttack({:?})", attack.to_num::<f32>());
@@ -89,18 +99,25 @@ impl Command {
                     | (command_id << 22)
                     | (address << 28)
             }
+            CommandMessage::Frequency(freq, attack) => {
+                let command_id = 0b000100;
+                let attack = (attack.to_bits() & 0b11_1111) as u32;
+                let frequency = (freq.to_bits()) as u32;
+
+                frequency | (attack << 16) | (command_id << 22) | (address << 28)
+            }
             CommandMessage::SetAttack(attack) => {
-                let command_id = 0b00001;
+                let command_id = 0b000001;
                 (attack.to_bits() as u32) | (command_id << 22) | (address << 28)
             }
             CommandMessage::Tick(emphasis) => {
-                let command_id = 0b00010;
+                let command_id = 0b000010;
                 let emphasis = emphasis as u32;
 
                 emphasis | (command_id << 22) | (address << 28)
             }
             CommandMessage::SetTempo(spm) => {
-                let command_id = 0b00011;
+                let command_id = 0b000011;
                 let spm = spm as u32;
                 spm | (command_id << 22) | (address << 28)
             }
@@ -108,8 +125,8 @@ impl Command {
     }
 
     pub fn deserialize(value: u32) -> Option<Self> {
-        let command_id = value >> 22 & 0b111111;
-        let address = value >> 28 & 0b1111;
+        let command_id = (value >> 22) & 0b111111;
+        let address = (value >> 28) & 0b1111;
 
         let message = match command_id {
             0 => {
@@ -173,6 +190,14 @@ impl Command {
                 } else {
                     None
                 }
+            }
+            4 => {
+                let freq = (value & 0xffff) as u16;
+                let attack = ((value >> 16) & 0b111111) as u8;
+                Some(CommandMessage::Frequency(
+                    U12F4::from_bits(freq),
+                    U4F4::from_bits(attack),
+                ))
             }
             _ => None,
         };

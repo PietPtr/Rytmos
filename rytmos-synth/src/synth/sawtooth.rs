@@ -1,6 +1,8 @@
+use core::u32;
+
 use fixed::{
-    traits::ToFixed,
-    types::{extra::U15, I1F15, U4F4, U8F8},
+    traits::{LossyInto, ToFixed},
+    types::{extra::U15, I1F15, U12F20, U15F17, U24F8, U44F20, U4F4, U8F8},
     FixedI32,
 };
 
@@ -15,6 +17,8 @@ pub struct SawtoothSynth {
     velocity: U8F8,
     sample_counter: u32,
 }
+
+// TODO: hard coded at 24000Hz sample rate, that should somehow be nicer
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct SawtoothSynthSettings {}
@@ -40,6 +44,22 @@ impl Synth for SawtoothSynth {
             log::error!("Failed to lookup increment");
             I1F15::from_num(0)
         }) << 1;
+    }
+
+    fn freq(&mut self, freq: fixed::types::U12F4) {
+        // TODO: determine performance somehow, this is probably slow
+        let freq: U15F17 = freq.into();
+        let per_sample: U15F17 = freq.wrapping_div(U15F17::from_num(24000));
+        let per_sample_fracs_cut = per_sample.to_bits() >> 2;
+        self.increment = I1F15::from_bits(per_sample_fracs_cut as i16);
+        // panic!(
+        //     "{:?} {:?} {:?}",
+        //     per_sample, per_sample_fracs_cut, self.increment
+        // );
+    }
+
+    fn attack(&mut self, attack: U4F4) {
+        self.velocity = attack.into()
     }
 
     fn next(&mut self) -> I1F15 {

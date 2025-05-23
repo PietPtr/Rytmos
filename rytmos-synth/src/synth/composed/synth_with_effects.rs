@@ -80,4 +80,12 @@ impl<S: Synth, E: Effect> Synth for SynthWithEffect<S, E> {
     fn address(&self) -> u32 {
         self.synth.address() | self.effect.address()
     }
+
+    fn freq(&mut self, freq: fixed::types::U12F4) {
+        todo!()
+    }
+
+    fn attack(&mut self, attack: U4F4) {
+        todo!()
+    }
 }

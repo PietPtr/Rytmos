@@ -84,4 +84,15 @@ impl Synth for DrumSynth {
     fn address(&self) -> u32 {
         self.address
     }
+
+    fn freq(&mut self, freq: fixed::types::U12F4) {}
+
+    fn attack(&mut self, attack: U4F4) {
+        self.hihat_synth.attack(attack);
+        self.snare_synth.attack(attack);
+        self.kick_synth.attack(attack);
+        self.strong_synth.attack(attack);
+        self.weak_synth.attack(attack);
+        self.cymbal_synth.attack(attack);
+    }
 }

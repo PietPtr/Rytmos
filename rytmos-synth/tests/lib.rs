@@ -1,7 +1,7 @@
 use std::sync::Once;
 
 use fixed::{
-    types::{extra::U15, I1F15, U14F2, U4F4},
+    types::{extra::U15, I1F15, U12F4, U14F2, U4F4},
     FixedU32,
 };
 use plotters::prelude::*;
@@ -30,6 +30,8 @@ use rytmos_synth::{
         Synth, SAMPLE_RATE,
     },
 };
+
+// TODO: need way better organisation of this test file
 
 static INIT: Once = Once::new();
 
@@ -315,6 +317,34 @@ fn test_sawtooth_synth() {
     export_to_wav(samples, "signal.wav");
 }
 
+#[test]
+fn test_freq_command() {
+    init_logger();
+
+    let mut synth = SawtoothSynth::make(0x0, SawtoothSynthSettings {});
+
+    let mut freq = U12F4::from_num(100).to_bits();
+
+    synth.freq(U12F4::from_bits(freq));
+    synth.attack(U4F4::ONE);
+
+    const LEN: usize = 44100;
+
+    let samples: Vec<i16> = (0..LEN)
+        .map(|sample| {
+            let i = synth.next();
+            if sample % 10 == 0 {
+                freq += 1;
+                synth.freq(U12F4::from_bits(freq));
+            }
+            i.to_bits()
+        })
+        .collect();
+
+    plot_samples(&samples[..LEN]).unwrap();
+    export_to_wav(samples, "signal.wav");
+}
+
 fn plot_samples(samples: &[i16]) -> Result<(), Box<dyn std::error::Error>> {
     let root = BitMapBackend::new("graph.png", (800, 600)).into_drawing_area();
     root.fill(&WHITE)?;
@@ -392,6 +422,8 @@ fn test_command_serdes() {
 
     let mut valid_commands = 0;
 
+    let mut passed = true;
+
     for i in 0..10000000 {
         let mut value: u32 = rng.gen();
         let command_id = rng.gen_range(0..8) & 0b111111;
@@ -402,13 +434,20 @@ fn test_command_serdes() {
         if let Some(cmd) = Command::deserialize(value) {
             valid_commands += 1;
             let serialized = cmd.serialize();
-            assert_eq!(
-                value, serialized,
-                "Failed serdes test #{i}: {:#?} => \n{:032b} =/=\n{:032b}",
-                cmd, value, serialized
-            );
+            if value != serialized {
+                println!(
+                    "Failed serdes test #{i}: {:#?} VS {:#?} => \n{:032b} =/=\n{:032b}",
+                    cmd,
+                    Command::deserialize(serialized),
+                    value,
+                    serialized,
+                );
+                passed = false;
+            }
         }
     }
+
+    assert!(passed);
 
     println!("Serialized {} valid commands.", valid_commands);
     assert!(valid_commands > 0);

@@ -48,4 +48,12 @@ impl<S: Synth, const N: usize> Synth for OvertoneSynth<S, N> {
     fn address(&self) -> u32 {
         self.address
     }
+
+    fn freq(&mut self, freq: fixed::types::U12F4) {
+        todo!()
+    }
+
+    fn attack(&mut self, attack: U4F4) {
+        todo!()
+    }
 }

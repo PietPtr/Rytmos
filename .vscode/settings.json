@@ -1,6 +1,4 @@
 {
-    "rust-analyzer.cargo.features": [
-        "benchmark"
-    ],
+    "rust-analyzer.cargo.features": [],
     "rust-analyzer.check.command": "clippy"
 }

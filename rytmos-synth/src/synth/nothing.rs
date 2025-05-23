@@ -30,4 +30,8 @@ impl Synth for NothingSynth {
     fn address(&self) -> u32 {
         0
     }
+
+    fn freq(&mut self, freq: fixed::types::U12F4) {}
+
+    fn attack(&mut self, attack: U4F4) {}
 }
