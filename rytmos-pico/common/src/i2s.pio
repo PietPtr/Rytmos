@@ -1,3 +1,4 @@
+; TODO: replace with rp2040-i2s crate 
 .program mclk_output
 
 .wrap_target
@@ -20,7 +21,6 @@
 ; work fine with 24-bit codecs.
 
 .side_set 2
-
 .wrap_target
                     ;        /--- LRCLK
                     ;        |/-- BCLK
@@ -38,3 +38,4 @@ dataR:
     out pins, 1       side 0b10
     jmp x-- dataR     side 0b11
 .wrap
+

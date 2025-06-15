@@ -31,6 +31,8 @@ use rytmos_synth::{
     },
 };
 
+pub mod effects;
+
 // TODO: need way better organisation of this test file
 
 static INIT: Once = Once::new();

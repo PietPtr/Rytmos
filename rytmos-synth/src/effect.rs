@@ -3,6 +3,7 @@ use rytmos_engrave::staff::Note;
 
 use crate::commands::{Command, CommandMessage};
 
+pub mod amplify;
 pub mod exponential_decay;
 pub mod linear_decay;
 pub mod lpf;
