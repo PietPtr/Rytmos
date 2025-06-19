@@ -5,11 +5,9 @@ use fixed::{
     FixedU32,
 };
 use plotters::prelude::*;
-use rand::Rng;
 
 use rytmos_engrave::*;
 use rytmos_synth::{
-    commands::Command,
     effect::{
         exponential_decay::{ExponentialDecay, ExponentialDecaySettings},
         linear_decay::{LinearDecay, LinearDecaySettings},
@@ -31,6 +29,7 @@ use rytmos_synth::{
     },
 };
 
+pub mod command_messages;
 pub mod effects;
 
 // TODO: need way better organisation of this test file
@@ -416,43 +415,6 @@ fn plot_two_samples(samples1: &[i16], samples2: &[i16]) -> Result<(), Box<dyn st
     chart.configure_series_labels().border_style(BLACK).draw()?;
 
     Ok(())
-}
-
-#[test]
-fn test_command_serdes() {
-    let mut rng = rand::thread_rng();
-
-    let mut valid_commands = 0;
-
-    let mut passed = true;
-
-    for i in 0..10000000 {
-        let mut value: u32 = rng.gen();
-        let command_id = rng.gen_range(0..8) & 0b111111;
-
-        value &= 0b11110000_00111111_11111111_11111111;
-        value |= command_id << 22;
-
-        if let Some(cmd) = Command::deserialize(value) {
-            valid_commands += 1;
-            let serialized = cmd.serialize();
-            if value != serialized {
-                println!(
-                    "Failed serdes test #{i}: {:#?} VS {:#?} => \n{:032b} =/=\n{:032b}",
-                    cmd,
-                    Command::deserialize(serialized),
-                    value,
-                    serialized,
-                );
-                passed = false;
-            }
-        }
-    }
-
-    assert!(passed);
-
-    println!("Serialized {} valid commands.", valid_commands);
-    assert!(valid_commands > 0);
 }
 
 fn export_to_wav(samples: Vec<i16>, file_path: &str) {

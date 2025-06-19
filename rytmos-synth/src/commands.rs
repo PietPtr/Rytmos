@@ -14,6 +14,8 @@ pub enum CommandMessage {
     Tick(bool),
     /// Set the tempo of the synth in _sixteenths_ per minute (whatever that means for a synth)
     SetTempo(u16),
+    /// Reconfiguration, any synth receives all data bits and can interpret them however they like
+    Reconfigure(u32),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -52,6 +54,9 @@ impl defmt::Format for Command {
             }
             CommandMessage::SetTempo(tempo) => {
                 defmt::write!(fmt, "SetTempo({})", tempo);
+            }
+            CommandMessage::Reconfigure(data) => {
+                defmt::write!(fmt, "Reconfigure({:032b})", data)
             }
         }
 
@@ -99,13 +104,6 @@ impl Command {
                     | (command_id << 22)
                     | (address << 28)
             }
-            CommandMessage::Frequency(freq, attack) => {
-                let command_id = 0b000100;
-                let attack = (attack.to_bits() & 0b11_1111) as u32;
-                let frequency = (freq.to_bits()) as u32;
-
-                frequency | (attack << 16) | (command_id << 22) | (address << 28)
-            }
             CommandMessage::SetAttack(attack) => {
                 let command_id = 0b000001;
                 (attack.to_bits() as u32) | (command_id << 22) | (address << 28)
@@ -120,6 +118,18 @@ impl Command {
                 let command_id = 0b000011;
                 let spm = spm as u32;
                 spm | (command_id << 22) | (address << 28)
+            }
+            CommandMessage::Frequency(freq, attack) => {
+                let command_id = 0b000100;
+                let attack = (attack.to_bits() & 0b11_1111) as u32;
+                let frequency = (freq.to_bits()) as u32;
+
+                frequency | (attack << 16) | (command_id << 22) | (address << 28)
+            }
+            CommandMessage::Reconfigure(data) => {
+                let command_id = 0b000101;
+                let data = data & 0b11_1111_1111_1111_1111_1111;
+                data | (command_id << 22) | (address << 28)
             }
         }
     }
@@ -199,6 +209,10 @@ impl Command {
                     U4F4::from_bits(attack),
                 ))
             }
+            5 => {
+                let data = value & 0b11_1111_1111_1111_1111_1111;
+                Some(CommandMessage::Reconfigure(data))
+            }
             _ => None,
         };
 
@@ -208,5 +222,3 @@ impl Command {
         })
     }
 }
-
-// TODO: scope module / crate for testing synths on the go?

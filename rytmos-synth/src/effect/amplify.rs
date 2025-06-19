@@ -1,7 +1,10 @@
 use derivative::Derivative;
 use fixed::types::{I17F15, I1F15, U4F4, U8F8};
 
-use crate::effect::Effect;
+use crate::{
+    commands::{Command, CommandMessage},
+    effect::Effect,
+};
 
 /// Simple linear amplification of the input that clips on overflow.
 pub struct Amplify {
@@ -44,7 +47,11 @@ impl Effect for Amplify {
 
     fn play(&mut self, _note: rytmos_engrave::staff::Note, _velocity: U4F4) {}
 
-    fn run_command(&mut self, _command: crate::commands::Command) {}
+    fn run_command(&mut self, command: Command) {
+        if let CommandMessage::Reconfigure(data) = command.message {
+            self.settings.amplification = U8F8::from_bits(data as u16)
+        }
+    }
 
     fn address(&self) -> u32 {
         u32::MAX
