@@ -6,7 +6,7 @@ use fixed::{
     FixedI32,
 };
 
-use crate::commands::Command;
+use crate::commands::{Command, CommandMessage};
 
 use super::{run_play_command, Synth};
 
@@ -76,6 +76,14 @@ impl Synth for SawtoothSynth {
 
     fn run_command(&mut self, command: Command) {
         run_play_command(self, command);
+
+        match command.message {
+            CommandMessage::Frequency(freq, velocity) => {
+                self.freq(freq);
+                self.attack(velocity);
+            }
+            _ => {}
+        }
     }
 
     fn address(&self) -> u32 {
