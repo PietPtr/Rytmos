@@ -1,8 +1,8 @@
 use core::u32;
 
 use fixed::{
-    traits::{LossyInto, ToFixed},
-    types::{extra::U15, I1F15, U12F20, U15F17, U24F8, U44F20, U4F4, U8F8},
+    traits::ToFixed,
+    types::{extra::U15, I1F15, U15F17, U4F4, U8F8},
     FixedI32,
 };
 

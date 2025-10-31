@@ -64,7 +64,7 @@ impl Synth for MetronomeSynth {
         self.address
     }
 
-    fn freq(&mut self, freq: fixed::types::U12F4) {}
+    fn freq(&mut self, _freq: fixed::types::U12F4) {}
 
     // TODO: attack VS velocity naming convention?
     fn attack(&mut self, attack: U4F4) {
