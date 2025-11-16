@@ -34,7 +34,7 @@ impl Debouncer {
     }
 
     pub fn is_high(&self) -> Result<bool, DebounceError> {
-        if self.current_stable_time > self.goal_stable_time {
+        if self.current_stable_time >= self.goal_stable_time {
             Ok(self.last_state)
         } else {
             Err(DebounceError::NotStable(
@@ -44,7 +44,7 @@ impl Debouncer {
     }
 
     pub fn is_low(&self) -> Result<bool, DebounceError> {
-        if self.current_stable_time > self.goal_stable_time {
+        if self.current_stable_time >= self.goal_stable_time {
             Ok(!self.last_state)
         } else {
             Err(DebounceError::NotStable(
